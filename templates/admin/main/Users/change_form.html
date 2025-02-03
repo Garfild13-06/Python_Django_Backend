@@ -1,0 +1,13 @@
+{% extends 'admin/change_form.html' %}
+{% load static %}
+
+{% block object-tools %}
+    {{ block.super }}
+    <div>
+        {% if original.avatar %}
+            <img src="{{ original.avatar.url }}" width="200" />
+        {% else %}
+            <img src="/media/placeholder.jpg" width="200" />
+        {% endif %}
+    </div>
+{% endblock object-tools %}

@@ -1,0 +1,8 @@
+{% extends "admin/base_site.html" %}
+
+{% block nav-global %}
+{{ block.super }}
+<div class="nav-global">
+    <a href="{% url 'schema-swagger-ui' %}" class="nav-global__item">Swagger</a>
+</div>
+{% endblock %}
