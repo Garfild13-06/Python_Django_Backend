@@ -1,20 +1,19 @@
 from django.contrib.auth import authenticate
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
-from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, status, filters
-from rest_framework.decorators import permission_classes, action
+from rest_framework.decorators import permission_classes
 from rest_framework.generics import CreateAPIView
-from rest_framework.pagination import PageNumberPagination, LimitOffsetPagination
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from main.models import Tobaccos, Mixes, Manufacturers, Bowls, MixLikes, CustomUser, MixFavorites, TasteCategories
-from main.serializers import CustomUserSerializer, MixesSerializer, ManufacturersSerializer, \
-    BowlsSerializer, TobaccosListSerializer, TobaccosDetailSerializer, CustomUserCreateSerializer, \
+from main.models import Tobaccos, Mixes, Manufacturers, MixLikes, CustomUser, MixFavorites, TasteCategories
+from main.serializers import CustomUserSerializer, MixesSerializer, \
+    TobaccosListSerializer,CustomUserCreateSerializer, \
     CustomUserUpdateSerializer, TobaccosSerializer, TasteCategoriesSerializer
 
 
@@ -279,22 +278,6 @@ class TobaccoCreateView(CreateAPIView):
     serializer_class = TobaccosSerializer
 
 
-# 🔹 Создание производителя
-class ManufacturerCreateView(CreateAPIView):
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
-    queryset = Manufacturers.objects.all()
-    serializer_class = ManufacturersSerializer
-
-
-# 🔹 Создание чаши
-class BowlCreateView(CreateAPIView):
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
-    queryset = Bowls.objects.all()
-    serializer_class = BowlsSerializer
-
-
 # 🔹 Создание категории вкусов
 class TasteCategoryCreateView(CreateAPIView):
     authentication_classes = [JWTAuthentication]
@@ -425,61 +408,3 @@ class MixFavoriteAPIView(APIView):
             "message": "Добавлено в избранное",
             "data": None
         }, status=status.HTTP_201_CREATED)
-
-
-class ManufacturersViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticatedOrReadOnly]
-    queryset = Manufacturers.objects.all()
-    serializer_class = ManufacturersSerializer
-    filter_backends = (filters.SearchFilter,)
-    search_fields = ['name', 'description']
-
-    def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        page = self.paginate_queryset(queryset)
-
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            paginated_response = self.get_paginated_response(serializer.data)
-            return Response({
-                "status": "ok",
-                "code": paginated_response.status_code,
-                "message": "Список производителей успешно получен",
-                "data": paginated_response.data
-            }, status=paginated_response.status_code)
-
-        serializer = self.get_serializer(queryset, many=True)
-        return Response({
-            "status": "ok",
-            "code": status.HTTP_200_OK,
-            "message": "Список производителей успешно получен",
-            "data": serializer.data
-        }, status=status.HTTP_200_OK)
-
-
-class BowlsViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticatedOrReadOnly]
-    queryset = Bowls.objects.all()
-    serializer_class = BowlsSerializer
-
-    def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        page = self.paginate_queryset(queryset)
-
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            paginated_response = self.get_paginated_response(serializer.data)
-            return Response({
-                "status": "ok",
-                "code": paginated_response.status_code,
-                "message": "Список чаш успешно получен",
-                "data": paginated_response.data
-            }, status=paginated_response.status_code)
-
-        serializer = self.get_serializer(queryset, many=True)
-        return Response({
-            "status": "ok",
-            "code": status.HTTP_200_OK,
-            "message": "Список чаш успешно получен",
-            "data": serializer.data
-        }, status=status.HTTP_200_OK)

@@ -57,7 +57,7 @@ class ResponseMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        print(f"[Middleware] Обрабатываем запрос: {request.method} {request.path}")
+        # print(f"[Middleware] Обрабатываем запрос: {request.method} {request.path}")
 
         if (
                 request.path.startswith("/admin")

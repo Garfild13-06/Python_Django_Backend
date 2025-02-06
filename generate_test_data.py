@@ -2,13 +2,17 @@ import os
 import django
 import random
 from faker import Faker
+from PIL import Image, ImageDraw, ImageFont
+from io import BytesIO
+from django.core.files.base import ContentFile
 
 # Устанавливаем Django окружение
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 
 from main.models import (
-    CustomUser, Manufacturers, Tobaccos, TasteCategories, Mixes, MixLikes, MixFavorites, MixTobacco
+    CustomUser, Manufacturers, Tobaccos, TasteCategories, Mixes, MixLikes, MixFavorites, MixTobacco, Bowls, MixBowl,
+    TobaccoStrength, TobaccoResistance, TobaccoSmokiness
 )
 
 fake = Faker()
@@ -19,6 +23,29 @@ NUM_MANUFACTURERS = 5
 NUM_TOBACCOS = 20
 NUM_CATEGORIES = 5
 NUM_MIXES = 10
+NUM_BOWLS = 10
+
+
+def generate_fake_image(width=640, height=480, text="Fake Image"):
+    """Генерирует изображение с текстом."""
+    img = Image.new("RGB", (width, height), color=(73, 109, 137))
+    draw = ImageDraw.Draw(img)
+
+    # Добавляем текст на изображение
+    try:
+        font = ImageFont.truetype("arial.ttf", size=36)  # Используем шрифт Arial (если доступен)
+    except IOError:
+        font = ImageFont.load_default()  # Если шрифт недоступен, используем стандартный
+
+    draw.text((10, 10), text, fill=(255, 255, 0), font=font)
+
+    # Сохраняем изображение в байтовый поток
+    buffer = BytesIO()
+    img.save(buffer, format="JPEG")
+    buffer.seek(0)
+
+    # Возвращаем Django-совместимый файл
+    return ContentFile(buffer.read(), name=f"{text.replace(' ', '_')}.jpg")
 
 
 def create_users():
@@ -42,7 +69,7 @@ def create_manufacturers():
         manufacturer = Manufacturers.objects.create(
             name=fake.company(),
             description=fake.text(max_nb_chars=200),
-            image=None,  # Можно указать путь к тестовому изображению
+            image=generate_fake_image(text="Manufacturer"),
         )
         manufacturers.append(manufacturer)
     print(f"Создано {len(manufacturers)} производителей.")
@@ -56,10 +83,10 @@ def create_tobaccos(manufacturers):
         tobacco = Tobaccos.objects.create(
             manufacturer=random.choice(manufacturers),
             taste=fake.word(),
-            image=None,  # Можно указать путь к тестовому изображению
-            tobacco_strength=random.choice([str(i) for i in range(11)]),
-            tobacco_resistance=random.choice(['low', 'middle', 'high']),
-            tobacco_smokiness=random.choice(['low', 'middle', 'high']),
+            image=generate_fake_image(text="Tobacco"),
+            tobacco_strength=random.choice(list(TobaccoStrength)),
+            tobacco_resistance=random.choice(list(TobaccoResistance)),
+            tobacco_smokiness=random.choice(list(TobaccoSmokiness)),
             description=fake.text(max_nb_chars=200),
         )
         tobaccos.append(tobacco)
@@ -79,20 +106,36 @@ def create_categories():
     return categories
 
 
-def create_mixes(users, categories, tobaccos):
+def create_bowls():
+    """Создаёт чаши."""
+    bowls = []
+    for _ in range(NUM_BOWLS):
+        bowl = Bowls.objects.create(
+            type=fake.text(max_nb_chars=50),
+            description=fake.text(max_nb_chars=200),
+            howTo=fake.text(max_nb_chars=50),
+            image=generate_fake_image(text="Bowl"),
+        )
+        bowls.append(bowl)
+    print(f"Создано {len(bowls)} чаш.")
+    return bowls
+
+
+def create_mixes(users, categories, tobaccos, bowls):
     """Создаёт миксы."""
     mixes = []
     for _ in range(NUM_MIXES):
         mix = Mixes.objects.create(
             name=fake.word().capitalize(),
             description=fake.text(max_nb_chars=300),
-            banner=None,  # Можно указать путь к тестовому изображению
+            banner=generate_fake_image(text="Mix Banner"),
             tasteType=random.choice(['fruit', 'gastro', 'sweet', 'grass', 'fresh']),
             author=random.choice(users),
         )
         # Добавляем категории
         mix.categories.add(*random.sample(categories, k=random.randint(1, len(categories))))
-
+        # Связываем микс с чашей
+        MixBowl.objects.create(mix=mix, bowl=random.choice(bowls))
         # Добавляем табаки
         num_tobaccos_in_mix = random.randint(1, 5)
         for _ in range(num_tobaccos_in_mix):
@@ -115,12 +158,10 @@ def create_likes_and_favorites(users, mixes):
         num_likes = random.randint(1, len(users))
         for user in random.sample(users, k=num_likes):
             likes.append(MixLikes.objects.create(mix=mix, user=user))
-
         # Избранное
         num_favorites = random.randint(1, len(users))
         for user in random.sample(users, k=num_favorites):
             favorites.append(MixFavorites.objects.create(mix=mix, user=user))
-
     print(f"Создано {len(likes)} лайков и {len(favorites)} избранных миксов.")
 
 
@@ -131,7 +172,8 @@ def generate_test_data():
     manufacturers = create_manufacturers()
     tobaccos = create_tobaccos(manufacturers)
     categories = create_categories()
-    mixes = create_mixes(users, categories, tobaccos)
+    bowls = create_bowls()
+    mixes = create_mixes(users, categories, tobaccos, bowls)
     create_likes_and_favorites(users, mixes)
     print("Генерация тестовых данных завершена.")
 

@@ -2,6 +2,8 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 import uuid
+from bowls.models import Bowls
+from manufacturers.models import Manufacturers
 
 
 class CustomUserManager(BaseUserManager):
@@ -87,32 +89,6 @@ class TobaccoStrength(models.TextChoices):
     EIGHT = '8', '8'
     NINE = '9', '9'
     TEN = '10', '10'
-
-
-class Manufacturers(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-
-    name = models.CharField(
-        "Название",
-        max_length=200,
-        null=False)
-
-    description = models.TextField(
-        verbose_name="Описание производителя",
-        default=None,
-        blank=True)
-
-    image = models.ImageField(
-        default=None,
-        blank=True)
-
-    class Meta:
-        verbose_name = "Производитель"
-        verbose_name_plural = "Производители"
-
-    def __str__(self):
-        return self.name
-
 
 class Tobaccos(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -274,21 +250,6 @@ class MixTobacco(models.Model):
     weight = models.IntegerField("%")
 
 
-class Bowls(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-
-    type = models.CharField("Тип чаши", max_length=200, null=False)
-    description = models.TextField("Описание", default=None, blank=True)
-    howTo = models.TextField("Инструкция", default=None, blank=True)
-    image = models.ImageField(default=None, blank=True)
-
-    class Meta:
-        verbose_name = "Чаша"
-        verbose_name_plural = "Чаши"
-
-    def __str__(self):
-        return self.type
-
 class MixBowl(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     mix = models.OneToOneField(
@@ -298,7 +259,7 @@ class MixBowl(models.Model):
         related_name="bowl"
     )
     bowl = models.ForeignKey(
-        "Bowls",
+        Bowls,  # Ссылка на модель Bowls
         on_delete=models.CASCADE,
         verbose_name="Чаша",
         related_name="mixes"

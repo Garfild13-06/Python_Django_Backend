@@ -2,7 +2,7 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from main.models import Tobaccos, Mixes, Manufacturers, Bowls, TasteCategories, MixLikes, MixFavorites, MixTobacco, \
+from main.models import Tobaccos, Mixes, Manufacturers, TasteCategories, MixLikes, MixFavorites, MixTobacco, \
     MixBowl
 from djoser.serializers import UserCreateSerializer, UserSerializer, SetPasswordSerializer
 from .models import CustomUser
@@ -15,7 +15,6 @@ CustomUserUpdateSerializer: Сериализатор для обновления
 CustomSetPasswordSerializer: Сериализатор для изменения пароля, включающий проверку, чтобы новый пароль не был пустым.
 TobaccosSerializer: Сериализатор для табаков, включающий поля id, taste, image, manufacturer, description, tobacco_strength, tobacco_resistance, tobacco_smokiness. Поля tobacco_strength, tobacco_resistance, tobacco_smokiness сгруппированы в отдельный словарь params.
 MixesSerializer: Сериализатор для миксов, включающий все поля модели Mixes.
-ManufacturersSerializer: Сериализатор для производителей, включающий поля id, name, description, image.
 BowlsSerializer: Сериализатор для чаш, включающий поля id, type, description, howTo, image.
 """
 
@@ -190,17 +189,3 @@ class MixesSerializer(serializers.ModelSerializer):
             return mix
         else:
             raise serializers.ValidationError("User not authenticated")
-
-
-# Сериализатор для производителей
-class ManufacturersSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Manufacturers
-        fields = ['id', 'name', 'description', 'image']  # Поля, которые будут включены в сериализатор
-
-
-# Сериализатор для чаш
-class BowlsSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Bowls
-        fields = ['id', 'type', 'description', 'howTo', 'image']  # Поля, которые будут включены в сериализатор

@@ -53,6 +53,8 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'djoser',
     'main',
+    'bowls',
+    'manufacturers'
 ]
 
 MIDDLEWARE = [
@@ -93,13 +95,16 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.mysql'),
-        'NAME': os.getenv('DB_NAME', 'test_db'),
+        'NAME': os.getenv('DB_NAME', 'test_inHookah'),
         'USER': os.getenv('DB_USER', 'test_user'),
         'PASSWORD': os.getenv('DB_PASSWORD', 'test_password'),
         'HOST': os.getenv('DB_HOST', '127.0.0.1'),
         'PORT': os.getenv('DB_PORT', '3306'),
+        'OPTIONS': {
+            'sql_mode': 'traditional',
+        },
         'TEST': {
-            'NAME': 'test_db',  # Использование той же базы данных для тестирования
+            'NAME': 'test_inHookah',  # База данных для тестирования
         },
     }
 }

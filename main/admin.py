@@ -99,20 +99,6 @@ class CustomUserAdmin(UserAdmin):
 
     avatar_preview.short_description = 'Avatar Preview'
 
-@admin.register(Manufacturers)
-class ManufacturersAdmin(admin.ModelAdmin):
-    change_form_template = 'admin/main/ManufacturersModel/change_form.html'
-    list_display = ('name', 'description', 'image_preview')
-    sortable_by = 'name'
-    search_fields = ['name']
-
-    def image_preview(self, obj):
-        try:
-            return mark_safe(f'<img src="{obj.image.url}" width="100" />')
-        except ValueError:
-            return mark_safe(f'<img src="/media/placeholder.jpg" width="100" />')
-
-    image_preview.short_description = 'Image'
 
 
 class MixTobaccoInline(admin.TabularInline):
@@ -197,19 +183,3 @@ class TobaccosAdmin(admin.ModelAdmin):
 @admin.register(TasteCategories)
 class TasteCategoriesAdmin(admin.ModelAdmin):
     list_display = ['name']
-
-
-@admin.register(Bowls)
-class BowlsAdmin(admin.ModelAdmin):
-    change_form_template = 'admin/main/BowlsModel/change_form.html'
-    list_display = ['type', 'description', 'howTo', 'image_preview']
-    search_fields = ['type']
-
-    def image_preview(self, obj):
-        try:
-            return mark_safe(f'<img src="{obj.image.url}" width="100" />')
-        except ValueError:
-            # return "No image"
-            return mark_safe(f'<img src="/media/placeholder.jpg" width="100" />')
-
-    image_preview.short_description = 'Image Preview'

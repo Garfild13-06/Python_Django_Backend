@@ -27,6 +27,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 from django.conf.urls import handler404
 
+# from bowls.views import BowlsViewSet
 from main.views import *
 
 
@@ -66,9 +67,7 @@ schema_view = get_schema_view(
 
 router = DefaultRouter()
 router.register('api/v1/tobaccos', TobaccoViewSet)
-# router.register('api/v1/mixes', MixesViewSet)
-router.register('api/v1/manufacturers', ManufacturersViewSet)
-router.register('api/v1/bowls', BowlsViewSet)
+
 urlpatterns = [
                   path('admin/', admin.site.urls),
                   path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
@@ -88,9 +87,11 @@ urlpatterns = [
                   # Создание объектов через отдельные эндпоинты /create/
                   path('api/v1/mixes/create/', MixCreateView.as_view(), name='mixes-create'),
                   path('api/v1/tobaccos/create/', TobaccoCreateView.as_view(), name='tobaccos-create'),
-                  path('api/v1/manufacturers/create/', ManufacturerCreateView.as_view(), name='manufacturers-create'),
-                  path('api/v1/bowls/create/', BowlCreateView.as_view(), name='bowls-create'),
+
                   path('api/v1/taste-categories/create/', TasteCategoryCreateView.as_view(),
                        name='taste-categories-create'),
+
+                  path('', include('bowls.urls')),  # Добавляем маршруты из bowls
+                  path('', include('manufacturers.urls'))  # Добавляем маршруты из manufacturers
 
               ] + router.urls + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
