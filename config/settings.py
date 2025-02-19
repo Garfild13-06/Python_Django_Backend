@@ -54,7 +54,11 @@ INSTALLED_APPS = [
     'djoser',
     'main',
     'bowls',
-    'manufacturers'
+    'manufacturers',
+    'tobaccos',
+    'mixes',
+    'users',
+    'tastecategories'
 ]
 
 MIDDLEWARE = [
@@ -173,7 +177,7 @@ REST_FRAMEWORK = {
 }
 
 # В settings.py
-AUTH_USER_MODEL = 'main.CustomUser'
+AUTH_USER_MODEL = 'users.CustomUser'
 
 DJOSER = {
     'USER_CREATE_PASSWORD_RETYPE': False,
@@ -189,10 +193,10 @@ DJOSER = {
     'USERNAME_RESET_CONFIRM_URL': 'auth/email/reset/confirm/{uid}/{token}',
     'TOKEN_MODEL': None,
     'SERIALIZERS': {
-        'user_create': 'main.serializers.CustomUserCreateSerializer',
-        'user': 'main.serializers.CustomUserSerializer',
-        'current_user': 'main.serializers.CustomUserSerializer',
-        'user_update': 'main.serializers.CustomUserUpdateSerializer',  # Новый сериализатор для обновления
+        'user_create': 'users.serializers.CustomUserCreateSerializer',
+        'user': 'users.serializers.CustomUserSerializer',
+        'current_user': 'users.serializers.CustomUserSerializer',
+        'user_update': 'users.serializers.CustomUserUpdateSerializer',  # Новый сериализатор для обновления
     },
     'EMAIL': {
         'activation': 'djoser.email.ActivationEmail',

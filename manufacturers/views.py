@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnl
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from main.models import Manufacturers
+from manufacturers.models import Manufacturers
 from manufacturers.serializers import ManufacturersSerializer
 
 

@@ -1,8 +1,9 @@
 import pytest
 from django.urls import reverse
 from rest_framework.test import APIClient
-from main.models import CustomUser
+
 from manufacturers.models import Manufacturers
+from users.models import CustomUser
 
 
 @pytest.fixture

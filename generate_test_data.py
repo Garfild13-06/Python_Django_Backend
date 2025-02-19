@@ -10,10 +10,12 @@ from django.core.files.base import ContentFile
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 
-from main.models import (
-    CustomUser, Manufacturers, Tobaccos, TasteCategories, Mixes, MixLikes, MixFavorites, MixTobacco, Bowls, MixBowl,
-    TobaccoStrength, TobaccoResistance, TobaccoSmokiness
-)
+from bowls.models import Bowls
+from manufacturers.models import Manufacturers
+from mixes.models import MixBowl, Mixes, MixTobacco, MixLikes, MixFavorites
+from tobaccos.models import TobaccoStrength, TobaccoResistance, TobaccoSmokiness, Tobaccos
+from users.models import CustomUser
+from tastecategories.models import TasteCategories
 
 fake = Faker()
 
