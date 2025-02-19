@@ -1,1 +1,0 @@
-[![Django CI/CD](https://github.com/inHookah/backend/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/inHookah/backend/actions/workflows/ci.yml)
