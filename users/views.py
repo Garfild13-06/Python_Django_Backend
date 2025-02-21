@@ -189,12 +189,6 @@ class CustomLimitOffsetPagination(LimitOffsetPagination):
 
         if limit is None:
             limit = 10
-        #     return Response({
-        #         "status": "bad",
-        #         "code": 400,
-        #         "message": "Параметр 'limit' обязателен."
-        #     }, status=400)
-
         try:
             self.limit = int(limit)
             self.offset = int(offset)

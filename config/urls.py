@@ -20,7 +20,7 @@ schema_view = get_schema_view(
     ),
     public=False,  # Не делаем документацию публичной
     permission_classes=(permissions.IsAuthenticated,),
-    authentication_classes=(SessionAuthentication, BasicAuthentication),
+    authentication_classes=(SessionAuthentication, BasicAuthentication)
 )
 
 urlpatterns = [
