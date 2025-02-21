@@ -11,10 +11,12 @@ from mixes.models import MixTobacco, MixBowl, Mixes, MixLikes, MixFavorites
 class MixTobaccoInline(admin.TabularInline):
     model = MixTobacco
 
+
 # Инлайн для связи Микс-Чаша
 class MixBowlInline(admin.StackedInline):
     model = MixBowl
     extra = 1  # Позволяет добавить одну чашу к миксу (можно изменить по желанию)
+
 
 class MixAdminForm(forms.ModelForm):
     Categories = forms.ModelMultipleChoiceField(

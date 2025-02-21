@@ -71,7 +71,7 @@ class Mixes(models.Model):
     class Meta:
         verbose_name = "Микс"
         verbose_name_plural = "Миксы"
-        db_table="app_mixes"
+        db_table = "app_mixes"
 
     def __str__(self):
         return self.name
@@ -95,7 +95,7 @@ class MixTobacco(models.Model):
     weight = models.IntegerField("%")
 
     class Meta:
-        db_table="app_mixtobacco"
+        db_table = "app_mixtobacco"
 
 
 class MixBowl(models.Model):
@@ -116,7 +116,7 @@ class MixBowl(models.Model):
     class Meta:
         verbose_name = "Чаша микса"
         verbose_name_plural = "Чаши миксов"
-        db_table="app_mixbowl"
+        db_table = "app_mixbowl"
 
 
 class MixLikes(models.Model):
@@ -141,7 +141,7 @@ class MixLikes(models.Model):
     class Meta:
         verbose_name = "Лайк микса"
         verbose_name_plural = "Лайки миксов"
-        db_table="app_mixlikes"
+        db_table = "app_mixlikes"
 
 
 class MixFavorites(models.Model):
@@ -166,4 +166,4 @@ class MixFavorites(models.Model):
     class Meta:
         verbose_name = "Избранный микс"
         verbose_name_plural = "Избранные миксы"
-        db_table="app_mixfavorites"
+        db_table = "app_mixfavorites"

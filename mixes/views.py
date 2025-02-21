@@ -321,8 +321,8 @@ class MixDetailView(APIView):
     )
     def post(self, request, *args, **kwargs):
         # Извлекаем ID микса из тела запроса
-        id = request.data.get("id")
-        if not id:
+        mix_id = request.data.get("id")
+        if not mix_id:
             return Response({
                 "status": "bad",
                 "code": status.HTTP_400_BAD_REQUEST,
@@ -331,7 +331,7 @@ class MixDetailView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         # Получаем объект микса или возвращаем 404, если он не существует
-        mix = get_object_or_404(Mixes, id=id)
+        mix = get_object_or_404(Mixes, id=mix_id)
         serializer = MixesSerializer(mix, context={'request': request})
 
         return Response({
@@ -390,8 +390,8 @@ class MixUpdateAPIView(APIView):
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID,
-                                     example="82b74c74-2399-405a-83af-26761b6fcd5b"),
+                "mix_id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID,
+                                         example="82b74c74-2399-405a-83af-26761b6fcd5b"),
                 "name": openapi.Schema(type=openapi.TYPE_STRING, example="Updated Mix Name"),
                 "description": openapi.Schema(type=openapi.TYPE_STRING, example="Updated description"),
                 "banner": openapi.Schema(type=openapi.TYPE_FILE, example="image.jpg"),
@@ -402,7 +402,7 @@ class MixUpdateAPIView(APIView):
                 ),
                 "tasteType": openapi.Schema(type=openapi.TYPE_STRING, example="fruit"),
             },
-            required=["id"]
+            required=["mix_id"]
         ),
         responses={
             200: openapi.Response(
@@ -445,16 +445,16 @@ class MixUpdateAPIView(APIView):
         }
     )
     def put(self, request, *args, **kwargs):
-        id = request.data.get("id")
-        if not id:
+        mix_id = request.data.get("mix_id")
+        if not mix_id:
             return Response({
                 "status": "bad",
                 "code": status.HTTP_400_BAD_REQUEST,
-                "message": "Поле 'id' обязательно для заполнения",
+                "message": "Поле 'mix_id' обязательно для заполнения",
                 "data": None
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        mix = get_object_or_404(Mixes, id=id)
+        mix = get_object_or_404(Mixes, id=mix_id)
         serializer = MixesSerializer(mix, data=request.data, partial=False)
         if serializer.is_valid():
             serializer.save()
@@ -475,119 +475,24 @@ class MixUpdateAPIView(APIView):
 
 class MixesPartialUpdateAPIView(APIView):
     """
-    Частичное обновление данных о миксе.
+    Частичное обновление микса.
     """
-    permission_classes = [IsAuthenticated]  # Требуется аутентификация
-    authentication_classes = [JWTAuthentication]  # Используем JWT-аутентификацию
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
 
     @swagger_auto_schema(
         tags=['Миксы'],
-        operation_summary="Частичное обновление данных о миксе по ID",
-        operation_description=(
-                "Обновляет только указанные поля микса.\n\n"
-                "- Требует аутентификации по токену."
-        ),
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID,
-                                     example="82b74c74-2399-405a-83af-26761b6fcd5b"),
-                "name": openapi.Schema(type=openapi.TYPE_STRING, example="Updated Mix Name"),
-                "description": openapi.Schema(type=openapi.TYPE_STRING, example="Updated description"),
-                "banner": openapi.Schema(type=openapi.TYPE_FILE, example="image.jpg"),
-                "categories": openapi.Schema(
-                    type=openapi.TYPE_ARRAY,
-                    items=openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID),
-                    example=["123e4567-e89b-12d3-a456-426614174000", "82b74c74-2399-405a-83af-26761b6fcd5b"]
-                ),
-                "tasteType": openapi.Schema(type=openapi.TYPE_STRING, example="fruit"),
-            },
-            required=["id"]  # id обязателен для частичного обновления
-        ),
+        operation_summary="Частичное обновление микса по ID",
+        request_body=MixesSerializer(partial=True),
         responses={
-            200: openapi.Response(
-                description="Микс успешно обновлен",
-                schema=openapi.Schema(
-                    type=openapi.TYPE_OBJECT,
-                    properties={
-                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="ok"),
-                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=200),
-                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Микс успешно обновлен"),
-                        "data": openapi.Schema(
-                            type=openapi.TYPE_OBJECT,
-                            properties={
-                                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID,
-                                                     example="82b74c74-2399-405a-83af-26761b6fcd5b"),
-                                "name": openapi.Schema(type=openapi.TYPE_STRING, example="Updated Mix Name"),
-                                "description": openapi.Schema(type=openapi.TYPE_STRING, example="Updated description"),
-                                "banner": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_URI,
-                                                         example="http://localhost:8000/media/banner.jpg"),
-                                "categories": openapi.Schema(
-                                    type=openapi.TYPE_ARRAY,
-                                    items=openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID),
-                                    example=["123e4567-e89b-12d3-a456-426614174000",
-                                             "82b74c74-2399-405a-83af-26761b6fcd5b"]
-                                ),
-                                "tasteType": openapi.Schema(type=openapi.TYPE_STRING, example="fruit"),
-                            }
-                        )
-                    }
-                )
-            ),
-            400: openapi.Response(
-                description="Некорректные данные",
-                schema=openapi.Schema(
-                    type=openapi.TYPE_OBJECT,
-                    properties={
-                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
-                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=400),
-                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Ошибка при обновлении микса"),
-                        "data": openapi.Schema(type=openapi.TYPE_OBJECT),
-                    }
-                )
-            ),
-            401: openapi.Response(
-                description="Неавторизованный доступ",
-                schema=openapi.Schema(
-                    type=openapi.TYPE_OBJECT,
-                    properties={
-                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
-                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=401),
-                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Необходима авторизация"),
-                        "data": openapi.Schema(type=openapi.TYPE_OBJECT)
-                    }
-                )
-            ),
-            404: openapi.Response(
-                description="Микс не найден",
-                schema=openapi.Schema(
-                    type=openapi.TYPE_OBJECT,
-                    properties={
-                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
-                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=404),
-                        "message": openapi.Schema(type=openapi.TYPE_STRING,
-                                                  example="Микс с указанным ID не существует"),
-                        "data": openapi.Schema(type=openapi.TYPE_OBJECT)
-                    }
-                )
-            ),
+            200: MixesSerializer(),
+            400: "Ошибка при обновлении микса",
+            401: "Не авторизован",
+            404: "Микс не найден"
         }
     )
-    def patch(self, request, *args, **kwargs):
-        # Извлекаем id из тела запроса
-        id = request.data.get("id")
-        if not id:
-            return Response({
-                "status": "bad",
-                "code": status.HTTP_400_BAD_REQUEST,
-                "message": "Поле 'id' обязательно для заполнения",
-                "data": None
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        # Получаем объект микса или возвращаем 404, если он не существует
-        instance = get_object_or_404(Mixes, id=id)
-
-        # Частичное обновление микса
+    def patch(self, request, pk, *args, **kwargs):
+        instance = Mixes.objects.get(pk=pk)
         serializer = MixesSerializer(instance, data=request.data, partial=True, context={'request': request})
         if serializer.is_valid():
             serializer.save()
@@ -597,7 +502,6 @@ class MixesPartialUpdateAPIView(APIView):
                 "message": "Микс успешно обновлен",
                 "data": serializer.data
             }, status=status.HTTP_200_OK)
-
         return Response({
             "status": "bad",
             "code": status.HTTP_400_BAD_REQUEST,
@@ -619,10 +523,10 @@ class MixDestroyAPIView(APIView):
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID,
-                                     example="82b74c74-2399-405a-83af-26761b6fcd5b")
+                "mix_id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID,
+                                         example="82b74c74-2399-405a-83af-26761b6fcd5b")
             },
-            required=["id"]
+            required=["mix_id"]
         ),
         responses={
             204: openapi.Response(
@@ -665,16 +569,16 @@ class MixDestroyAPIView(APIView):
         }
     )
     def delete(self, request, *args, **kwargs):
-        id = request.data.get("id")
-        if not id:
+        mix_id = request.data.get("mix_id")
+        if not mix_id:
             return Response({
                 "status": "bad",
                 "code": status.HTTP_400_BAD_REQUEST,
-                "message": "Поле 'id' обязательно для заполнения",
+                "message": "Поле 'mix_id' обязательно для заполнения",
                 "data": None
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        mix = get_object_or_404(Mixes, id=id)
+        mix = get_object_or_404(Mixes, id=mix_id)
         mix.delete()
 
         return Response({
@@ -690,6 +594,7 @@ class MixLikeAPIView(APIView):
     Обработка POST-запроса для добавления или удаления лайка к миксу.
     """
     permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
 
     @swagger_auto_schema(
         tags=['Миксы'],
@@ -702,10 +607,10 @@ class MixLikeAPIView(APIView):
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID,
-                                     example="82b74c74-2399-405a-83af-26761b6fcd5b")
+                "mix_id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID,
+                                         example="82b74c74-2399-405a-83af-26761b6fcd5b")
             },
-            required=["id"]
+            required=["mix_id"]
         ),
         responses={
             201: openapi.Response(
@@ -761,16 +666,16 @@ class MixLikeAPIView(APIView):
         }
     )
     def post(self, request, *args, **kwargs):
-        id = request.data.get("id")
-        if not id:
+        mix_id = request.data.get("mix_id")
+        if not mix_id:
             return Response({
                 "status": "bad",
                 "code": status.HTTP_400_BAD_REQUEST,
-                "message": "Поле 'id' обязательно для заполнения",
+                "message": "Поле 'mix_id' обязательно для заполнения",
                 "data": None
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        mix = get_object_or_404(Mixes, id=id)
+        mix = get_object_or_404(Mixes, id=mix_id)
         user = request.user
         like, created = MixLikes.objects.get_or_create(user=user, mix=mix)
 
@@ -796,6 +701,7 @@ class MixFavoriteAPIView(APIView):
     Обработка POST-запроса для добавления или удаления микса из избранного.
     """
     permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
 
     @swagger_auto_schema(
         tags=['Миксы'],
@@ -803,10 +709,10 @@ class MixFavoriteAPIView(APIView):
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID,
-                                     example="82b74c74-2399-405a-83af-26761b6fcd5b")
+                "mix_id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID,
+                                         example="82b74c74-2399-405a-83af-26761b6fcd5b")
             },
-            required=["id"]
+            required=["mix_id"]
         ),
         responses={
             201: openapi.Response(
@@ -861,16 +767,16 @@ class MixFavoriteAPIView(APIView):
         }
     )
     def post(self, request, *args, **kwargs):
-        id = request.data.get("id")
-        if not id:
+        mix_id = request.data.get("mix_id")
+        if not mix_id:
             return Response({
                 "status": "bad",
                 "code": status.HTTP_400_BAD_REQUEST,
-                "message": "Поле 'id' обязательно для заполнения",
+                "message": "Поле 'mix_id' обязательно для заполнения",
                 "data": None
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        mix = get_object_or_404(Mixes, id=id)
+        mix = get_object_or_404(Mixes, id=mix_id)
         user = request.user
 
         favorite, created = MixFavorites.objects.get_or_create(user=user, mix=mix)
