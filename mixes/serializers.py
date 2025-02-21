@@ -1,78 +1,56 @@
-from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-
-
+from .models import Mixes, MixTobacco, MixBowl
+from tobaccos.serializers import TobaccosSerializer
+from bowls.serializers import BowlsSerializer
 from tastecategories.serializers import TasteCategoriesSerializer
-from mixes.models import MixTobacco, MixBowl, Mixes, MixLikes, MixFavorites
-from users.models import CustomUser
-
-
-class MixAuthorSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = CustomUser
-        fields = ['id', 'username', 'nickname', 'avatar']  # Включаем минимальные поля
+from users.serializers import CustomUserSerializer
 
 
 class MixTobaccoSerializer(serializers.ModelSerializer):
-    id = serializers.CharField(source='tobacco.id')
-    taste = serializers.CharField(source='tobacco.taste')
-    manufacturer = serializers.CharField(source='tobacco.manufacturer')
-    image = serializers.ImageField(source='tobacco.image')
-    weight = serializers.IntegerField()  # Вес табака в миксе
+    tobacco = TobaccosSerializer(read_only=True)
+    weight = serializers.IntegerField()
 
     class Meta:
         model = MixTobacco
-        fields = ['id', 'taste', 'manufacturer', 'image', 'weight']  # Отображаем табак и вес из MixTobacco
+        fields = ['tobacco', 'weight']
 
 
 class MixBowlSerializer(serializers.ModelSerializer):
-    id = serializers.UUIDField(source='bowl.id')
-    type = serializers.CharField(source='bowl.type')
-    description = serializers.CharField(source='bowl.description')
-    image = serializers.ImageField(source='bowl.image')
+    bowl = BowlsSerializer(read_only=True)
 
     class Meta:
         model = MixBowl
-        fields = ['id', 'type', 'description', 'image']
+        fields = ['bowl']
 
 
-# Сериализатор для миксов
 class MixesSerializer(serializers.ModelSerializer):
-    categories = TasteCategoriesSerializer(many=True)
+    categories = TasteCategoriesSerializer(many=True, read_only=True)
     likes_count = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
     is_favorited = serializers.SerializerMethodField()
-    author = MixAuthorSerializer(read_only=True)  # Вложенный сериализатор для автора
-    goods = MixTobaccoSerializer(source='compares', many=True,
-                                 read_only=True)  # Связь через поле `compares` в MixTobacco
-    bowl = MixBowlSerializer(read_only=True)  # Связь с чашей
+    author = CustomUserSerializer(read_only=True)
+    goods = MixTobaccoSerializer(source='compares', many=True, read_only=True)
+    bowl = MixBowlSerializer(read_only=True)
 
     class Meta:
         model = Mixes
-        fields = ['id', 'name', 'description', 'banner', 'created', 'likes_count', 'is_liked', 'is_favorited',
-                  'categories', 'goods', 'bowl', 'author']
+        fields = [
+            'id', 'name', 'description', 'banner', 'created',
+            'likes_count', 'is_liked', 'is_favorited',
+            'categories', 'goods', 'bowl', 'author'
+        ]
 
     def get_likes_count(self, obj):
         return obj.total_likes()
 
     def get_is_liked(self, obj):
-        request = self.context.get('request', None)
+        request = self.context.get('request')
         if request and request.user.is_authenticated:
-            return MixLikes.objects.filter(mix=obj, user_id=request.user.id).exists()
+            return obj.likes.filter(user=request.user).exists()
         return False
 
     def get_is_favorited(self, obj):
-        request = self.context.get('request', None)
+        request = self.context.get('request')
         if request and request.user.is_authenticated:
-            return MixFavorites.objects.filter(mix=obj, user_id=request.user.id).exists()
+            return obj.favorites.filter(user=request.user).exists()
         return False
-
-    def create(self, validated_data):
-        request = self.context.get('request', None)
-        if request and request.user.is_authenticated:
-            validated_data['author'] = request.user  # Назначаем автором текущего пользователя
-            mix = Mixes.objects.create(**validated_data)
-            return mix
-        else:
-            raise serializers.ValidationError("User not authenticated")
