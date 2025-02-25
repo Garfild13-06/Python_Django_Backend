@@ -1,223 +1,649 @@
-from django.shortcuts import render
-from django.contrib.auth import authenticate
-from django.db.models import Q
-from django.shortcuts import get_object_or_404
-from rest_framework import viewsets, status, filters
-from rest_framework.decorators import permission_classes
-from rest_framework.generics import CreateAPIView
-from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
-from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework_simplejwt.tokens import RefreshToken
+from utils.CustomLimitOffsetPagination import CustomLimitOffsetPagination
+from django.shortcuts import get_object_or_404
+from .models import CustomUser
+from .serializers import CustomUserSerializer, CustomUserCreateSerializer, CustomUserUpdateSerializer
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
 
-from users.models import CustomUser
-from users.serializers import CustomUserCreateSerializer, CustomUserUpdateSerializer, CustomUserSerializer
+
+class UserListAPIView(APIView):
+    permission_classes = [IsAdminUser]
+    authentication_classes = [JWTAuthentication]
+
+    @swagger_auto_schema(
+        tags=['Пользователи'],
+        operation_summary="Получение списка пользователей",
+        operation_description=(
+            "Возвращает список всех пользователей с возможностью фильтрации по email.\n\n"
+            "- Поддерживает фильтрацию через поле `email`.\n"
+            "- Поддерживает пагинацию через параметры `limit` и `offset`.\n"
+            "- Требуется аутентификация администратора через JWT."
+        ),
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'email': openapi.Schema(type=openapi.TYPE_STRING, description="Фильтр по email (необязательно)", example="user@example.com"),
+                'limit': openapi.Schema(type=openapi.TYPE_INTEGER, description="Максимальное количество записей на странице", example=10),
+                'offset': openapi.Schema(type=openapi.TYPE_INTEGER, description="Смещение для пагинации", example=0),
+            }
+        ),
+        responses={
+            200: openapi.Response(
+                description="Список пользователей успешно получен",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="ok"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=200),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Список пользователей успешно получен"),
+                        "data": openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                "results": openapi.Schema(
+                                    type=openapi.TYPE_ARRAY,
+                                    items=openapi.Schema(
+                                        type=openapi.TYPE_OBJECT,
+                                        properties={
+                                            "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID, example="82b74c74-2399-405a-83af-26761b6fcd5b"),
+                                            "email": openapi.Schema(type=openapi.TYPE_STRING, example="user@example.com"),
+                                            "username": openapi.Schema(type=openapi.TYPE_STRING, example="user123"),
+                                            "nickname": openapi.Schema(type=openapi.TYPE_STRING, example="User"),
+                                            "date_joined": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, example="2023-01-01T12:00:00Z"),
+                                        }
+                                    )
+                                ),
+                                "count": openapi.Schema(type=openapi.TYPE_INTEGER, example=25),
+                                "next_offset": openapi.Schema(type=openapi.TYPE_INTEGER, example=10),
+                                "previous_offset": openapi.Schema(type=openapi.TYPE_INTEGER, example=0),
+                            }
+                        )
+                    }
+                )
+            ),
+            400: openapi.Response(
+                description="Ошибка в параметрах запроса",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=400),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Некорректные параметры пагинации"),
+                        "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
+                    }
+                )
+            ),
+            401: openapi.Response(
+                description="Не авторизован",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=401),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Требуется аутентификация"),
+                        "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
+                    }
+                )
+            ),
+            403: openapi.Response(
+                description="Доступ запрещён",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=403),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Требуются права администратора"),
+                        "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
+                    }
+                )
+            )
+        }
+    )
+    def post(self, request):
+        queryset = CustomUser.objects.all()
+        email = request.data.get('email')
+        if email:
+            queryset = queryset.filter(email__icontains=email)
+        paginator = CustomLimitOffsetPagination()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = CustomUserSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
-# Create your views here.
-class RegistrationAPIView(APIView):
+class UserDetailAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+    @swagger_auto_schema(
+        tags=['Пользователи'],
+        operation_summary="Получение информации о пользователе по ID",
+        operation_description=(
+            "Возвращает детальную информацию о пользователе по его идентификатору.\n\n"
+            "- Требуется передать `id` в теле запроса.\n"
+            "- Доступно только администратору или авторизованному пользователю.\n"
+            "- Требуется аутентификация через JWT."
+        ),
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['id'],
+            properties={
+                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID, description="ID пользователя", example="82b74c74-2399-405a-83af-26761b6fcd5b"),
+            }
+        ),
+        responses={
+            200: openapi.Response(
+                description="Информация о пользователе успешно получена",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="ok"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=200),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Информация о пользователе успешно получена"),
+                        "data": openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID, example="82b74c74-2399-405a-83af-26761b6fcd5b"),
+                                "email": openapi.Schema(type=openapi.TYPE_STRING, example="user@example.com"),
+                                "username": openapi.Schema(type=openapi.TYPE_STRING, example="user123"),
+                                "nickname": openapi.Schema(type=openapi.TYPE_STRING, example="User"),
+                                "date_joined": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, example="2023-01-01T12:00:00Z"),
+                            }
+                        )
+                    }
+                )
+            ),
+            400: openapi.Response(
+                description="Некорректные данные в теле запроса",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=400),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Поле 'id' обязательно"),
+                        "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
+                    }
+                )
+            ),
+            401: openapi.Response(
+                description="Не авторизован",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=401),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Требуется аутентификация"),
+                        "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
+                    }
+                )
+            ),
+            403: openapi.Response(
+                description="Доступ запрещён",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=403),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Доступ запрещён"),
+                        "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
+                    }
+                )
+            ),
+            404: openapi.Response(
+                description="Пользователь не найден",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=404),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Пользователь с указанным ID не найден"),
+                        "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
+                    }
+                )
+            )
+        }
+    )
+    def post(self, request):
+        user_id = request.data.get('id')
+        if not user_id:
+            return Response({"error": "User ID is required"}, status=400)
+        user = get_object_or_404(CustomUser, id=user_id)
+        if not (request.user.is_staff or request.user.id == user.id):
+            return Response({"error": "Permission denied"}, status=403)
+        serializer = CustomUserSerializer(user)
+        return Response(serializer.data)
+
+
+class UserCreateAPIView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    @swagger_auto_schema(
+        tags=['Пользователи'],
+        operation_summary="Создание нового пользователя",
+        operation_description=(
+            "Создаёт нового пользователя с указанными данными.\n\n"
+            "- Требуются поля `email`, `username` и `password`.\n"
+            "- Доступно всем пользователям, не требует аутентификации."
+        ),
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['email', 'username', 'password'],
+            properties={
+                "email": openapi.Schema(type=openapi.TYPE_STRING, description="Email пользователя", example="newuser@example.com"),
+                "username": openapi.Schema(type=openapi.TYPE_STRING, description="Имя пользователя", example="newuser123"),
+                "password": openapi.Schema(type=openapi.TYPE_STRING, description="Пароль пользователя", example="securepassword123"),
+            }
+        ),
+        responses={
+            201: openapi.Response(
+                description="Пользователь успешно создан",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="ok"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=201),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Пользователь успешно создан"),
+                        "data": openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                "message": openapi.Schema(type=openapi.TYPE_STRING, example="User created successfully"),
+                                "user_id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID, example="0084f87f-75df-42ff-965f-69eb711a66ff"),
+                            }
+                        )
+                    }
+                )
+            ),
+            400: openapi.Response(
+                description="Ошибка при создании пользователя",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=400),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Ошибка при создании пользователя"),
+                        "data": openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            additional_properties=True,
+                            example={"email": ["This field is required"]}
+                        )
+                    }
+                )
+            )
+        }
+    )
     def post(self, request):
         serializer = CustomUserCreateSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                "status": "ok",
-                "code": status.HTTP_201_CREATED,
-                "message": "Пользователь успешно зарегистрирован",
-                "data": {
-                    'refresh': str(refresh),
-                    'access': str(refresh.access_token)
-                }
-            }, status=status.HTTP_201_CREATED)
-        return Response({
-            "status": "bad",
-            "code": status.HTTP_400_BAD_REQUEST,
-            "message": "Ошибка при регистрации пользователя",
-            "data": serializer.errors
-        }, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "User created successfully", "user_id": str(user.id)}, status=201)
+        return Response(serializer.errors, status=400)
 
 
-class LoginAPIView(APIView):
-    def post(self, request):
-        data = request.data
-        email = data.get('email', None)
-        password = data.get('password', None)
+class UserUpdateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
 
-        if email is None or password is None:
-            return Response({
-                "status": "bad",
-                "code": status.HTTP_400_BAD_REQUEST,
-                "message": "Нужен и email, и пароль",
-                "data": None
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        user = authenticate(email=email, password=password)
-        if user is None:
-            return Response({
-                "status": "bad",
-                "code": status.HTTP_401_UNAUTHORIZED,
-                "message": "Неверные данные",
-                "data": None
-            }, status=status.HTTP_401_UNAUTHORIZED)
-
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            "status": "ok",
-            "code": status.HTTP_200_OK,
-            "message": "Вход выполнен успешно",
-            "data": {
-                'refresh': str(refresh),
-                'access': str(refresh.access_token)
+    @swagger_auto_schema(
+        tags=['Пользователи'],
+        operation_summary="Полное обновление данных пользователя",
+        operation_description=(
+            "Обновляет все поля пользователя по его ID.\n\n"
+            "- Требуется передать `id` и обновляемые данные.\n"
+            "- Доступно администратору или самому пользователю.\n"
+            "- Требуется аутентификация через JWT."
+        ),
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['id'],
+            properties={
+                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID, description="ID пользователя", example="82b74c74-2399-405a-83af-26761b6fcd5b"),
+                "email": openapi.Schema(type=openapi.TYPE_STRING, description="Email пользователя", example="updateduser@example.com"),
+                "username": openapi.Schema(type=openapi.TYPE_STRING, description="Имя пользователя", example="updateduser123"),
+                "nickname": openapi.Schema(type=openapi.TYPE_STRING, description="Никнейм пользователя", example="UpdatedUser"),
             }
-        }, status=status.HTTP_200_OK)
+        ),
+        responses={
+            200: openapi.Response(
+                description="Данные пользователя успешно обновлены",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="ok"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=200),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Данные пользователя успешно обновлены"),
+                        "data": openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID, example="82b74c74-2399-405a-83af-26761b6fcd5b"),
+                                "email": openapi.Schema(type=openapi.TYPE_STRING, example="updateduser@example.com"),
+                                "username": openapi.Schema(type=openapi.TYPE_STRING, example="updateduser123"),
+                                "nickname": openapi.Schema(type=openapi.TYPE_STRING, example="UpdatedUser"),
+                                "date_joined": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, example="2023-01-01T12:00:00Z"),
+                            }
+                        )
+                    }
+                )
+            ),
+            400: openapi.Response(
+                description="Некорректные данные",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=400),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Ошибка при обновлении пользователя"),
+                        "data": openapi.Schema(type=openapi.TYPE_OBJECT, example={"email": ["This field is required"]})
+                    }
+                )
+            ),
+            401: openapi.Response(
+                description="Не авторизован",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=401),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Требуется аутентификация"),
+                        "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
+                    }
+                )
+            ),
+            403: openapi.Response(
+                description="Доступ запрещён",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=403),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Доступ запрещён"),
+                        "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
+                    }
+                )
+            ),
+            404: openapi.Response(
+                description="Пользователь не найден",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=404),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Пользователь с указанным ID не найден"),
+                        "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
+                    }
+                )
+            )
+        }
+    )
+    def put(self, request):
+        user_id = request.data.get('id')
+        if not user_id:
+            return Response({"error": "User ID is required"}, status=400)
+        user = get_object_or_404(CustomUser, id=user_id)
+        if not (request.user.is_staff or request.user.id == user.id):
+            return Response({"error": "Permission denied"}, status=403)
+        serializer = CustomUserUpdateSerializer(user, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
 
 
-class LogoutAPIView(APIView):
-    def post(self, request):
-        refresh_token = request.data.get('refresh_token')  # С клиента нужно отправить refresh token
-        if not refresh_token:
-            return Response({
-                "status": "bad",
-                "code": status.HTTP_400_BAD_REQUEST,
-                "message": "Необходим Refresh token",
-                "data": None
-            }, status=status.HTTP_400_BAD_REQUEST)
+class UserPartialUpdateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
 
-        try:
-            token = RefreshToken(refresh_token)
-            token.blacklist()  # Добавить его в чёрный список
-        except Exception:
-            return Response({
-                "status": "bad",
-                "code": status.HTTP_400_BAD_REQUEST,
-                "message": "Неверный Refresh token",
-                "data": None
-            }, status=status.HTTP_400_BAD_REQUEST)
+    @swagger_auto_schema(
+        tags=['Пользователи'],
+        operation_summary="Частичное обновление данных пользователя",
+        operation_description=(
+            "Обновляет указанные поля пользователя по его ID.\n\n"
+            "- Требуется передать `id` и обновляемые данные.\n"
+            "- Доступно администратору или самому пользователю.\n"
+            "- Требуется аутентификация через JWT."
+        ),
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['id'],
+            properties={
+                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID, description="ID пользователя", example="82b74c74-2399-405a-83af-26761b6fcd5b"),
+                "email": openapi.Schema(type=openapi.TYPE_STRING, description="Email пользователя", example="updateduser@example.com"),
+                "username": openapi.Schema(type=openapi.TYPE_STRING, description="Имя пользователя", example="updateduser123"),
+                "nickname": openapi.Schema(type=openapi.TYPE_STRING, description="Никнейм пользователя", example="UpdatedUser"),
+            }
+        ),
+        responses={
+            200: openapi.Response(
+                description="Данные пользователя успешно обновлены",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="ok"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=200),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Данные пользователя успешно обновлены"),
+                        "data": openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID, example="82b74c74-2399-405a-83af-26761b6fcd5b"),
+                                "email": openapi.Schema(type=openapi.TYPE_STRING, example="updateduser@example.com"),
+                                "username": openapi.Schema(type=openapi.TYPE_STRING, example="updateduser123"),
+                                "nickname": openapi.Schema(type=openapi.TYPE_STRING, example="UpdatedUser"),
+                                "date_joined": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, example="2023-01-01T12:00:00Z"),
+                            }
+                        )
+                    }
+                )
+            ),
+            400: openapi.Response(
+                description="Некорректные данные",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=400),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Ошибка при обновлении пользователя"),
+                        "data": openapi.Schema(type=openapi.TYPE_OBJECT, example={"nickname": ["This field may not be blank"]})
+                    }
+                )
+            ),
+            401: openapi.Response(
+                description="Не авторизован",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=401),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Требуется аутентификация"),
+                        "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
+                    }
+                )
+            ),
+            403: openapi.Response(
+                description="Доступ запрещён",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=403),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Доступ запрещён"),
+                        "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
+                    }
+                )
+            ),
+            404: openapi.Response(
+                description="Пользователь не найден",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=404),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Пользователь с указанным ID не найден"),
+                        "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
+                    }
+                )
+            )
+        }
+    )
+    def patch(self, request):
+        user_id = request.data.get('id')
+        if not user_id:
+            return Response({"error": "User ID is required"}, status=400)
+        user = get_object_or_404(CustomUser, id=user_id)
+        if not (request.user.is_staff or request.user.id == user.id):
+            return Response({"error": "Permission denied"}, status=403)
+        serializer = CustomUserUpdateSerializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
 
-        return Response({
-            "status": "ok",
-            "code": status.HTTP_200_OK,
-            "message": "Выход успешен",
-            "data": None
-        }, status=status.HTTP_200_OK)
+
+class UserDeleteAPIView(APIView):
+    permission_classes = [IsAdminUser]
+    authentication_classes = [JWTAuthentication]
+
+    @swagger_auto_schema(
+        tags=['Пользователи'],
+        operation_summary="Удаление пользователя",
+        operation_description=(
+            "Удаляет пользователя по его ID.\n\n"
+            "- Требуется передать `id` в теле запроса.\n"
+            "- Доступно только администратору и самому пользователю.\n"
+            "- Требуется аутентификация через JWT."
+        ),
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['id'],
+            properties={
+                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID, description="ID пользователя", example="82b74c74-2399-405a-83af-26761b6fcd5b"),
+            }
+        ),
+        responses={
+            204: openapi.Response(
+                description="Пользователь успешно удалён",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="ok"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=204),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Пользователь успешно удалён"),
+                        "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
+                    }
+                )
+            ),
+            400: openapi.Response(
+                description="Некорректные данные",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=400),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Поле 'id' обязательно"),
+                        "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
+                    }
+                )
+            ),
+            401: openapi.Response(
+                description="Не авторизован",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=401),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Требуется аутентификация"),
+                        "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
+                    }
+                )
+            ),
+            403: openapi.Response(
+                description="Доступ запрещён",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=403),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Требуются права администратора"),
+                        "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
+                    }
+                )
+            ),
+            404: openapi.Response(
+                description="Пользователь не найден",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=404),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Пользователь с указанным ID не найден"),
+                        "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
+                    }
+                )
+            )
+        }
+    )
+    def delete(self, request):
+        user_id = request.data.get('id')
+        if not user_id:
+            return Response({"error": "User ID is required"}, status=400)
+        user = get_object_or_404(CustomUser, id=user_id)
+        user.delete()
+        return Response({"message": "User deleted successfully"}, status=204)
 
 
 class UserProfileView(APIView):
-    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
 
-    def get(self, request):
-        user = request.user
-        return Response({
-            "id": user.id,
-            "email": user.email,
-            "username": user.username,
-            "nickname": user.nickname,
-            "avatar": user.avatar.url if user.avatar else None,
-            "date_joined": user.date_joined
-        })
-
-    def patch(self, request):
-        """Частичное обновление профиля"""
-        user = request.user
-        serializer = CustomUserUpdateSerializer(user, data=request.data, partial=True)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response({
-                "status": "ok",
-                "message": "Профиль успешно обновлён",
-                "data": serializer.data
-            }, status=status.HTTP_200_OK)
-
-        return Response({
-            "status": "error",
-            "message": "Ошибка обновления профиля",
-            "errors": serializer.errors
-        }, status=status.HTTP_400_BAD_REQUEST)
-
-
-class CustomUserViewSet(viewsets.ModelViewSet):
-    queryset = CustomUser.objects.all()
-    serializer_class = CustomUserSerializer
-
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context.update({"request": self.request})
-        return context
-
-    def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        page = self.paginate_queryset(queryset)
-
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            paginated_response = self.get_paginated_response(serializer.data)
-            return Response({
-                "status": "ok",
-                "code": paginated_response.status_code,
-                "message": "Список пользователей успешно получен",
-                "data": paginated_response.data
-            }, status=paginated_response.status_code)
-
-        serializer = self.get_serializer(queryset, many=True)
-        return Response({
-            "status": "ok",
-            "code": status.HTTP_200_OK,
-            "message": "Список пользователей успешно получен",
-            "data": serializer.data
-        }, status=status.HTTP_200_OK)
-
-
-@permission_classes([IsAuthenticated])
-def profile(request, user_id):
-    pass
-
-
-class CustomLimitOffsetPagination(LimitOffsetPagination):
-    """Кастомная офсетная пагинация."""
-
-    max_limit = 100  # Максимально допустимое количество элементов
-
-    def paginate_queryset(self, queryset, request, view=None):
-        # Извлекаем параметры из тела запроса (body)
-        limit = request.data.get('limit')
-        offset = request.data.get('offset', 0)  # По умолчанию offset = 0
-
-        if limit is None:
-            limit = 10
-        try:
-            self.limit = int(limit)
-            self.offset = int(offset)
-        except ValueError:
-            return Response({
-                "status": "bad",
-                "code": 400,
-                "message": "Некорректное значение для 'limit' или 'offset'."
-            }, status=400)
-
-        if self.limit > self.max_limit:
-            return Response({
-                "status": "bad",
-                "code": 400,
-                "message": f"Значение 'limit' не может превышать {self.max_limit}."
-            }, status=400)
-
-        self.count = queryset.count()
-        self.request = request
-
-        if self.offset >= self.count:
-            return []
-
-        return list(queryset[self.offset:self.offset + self.limit])
-
-    def get_paginated_response(self, data):
-        return Response({
-            'results': data,
-            'count': self.count,
-            'next_offset': self.offset + self.limit if self.offset + self.limit < self.count else None,
-            'previous_offset': self.offset - self.limit if self.offset > 0 else None,
-        })
+    @swagger_auto_schema(
+        tags=['Пользователи'],
+        operation_summary="Получение профиля текущего пользователя",
+        operation_description=(
+            "Возвращает данные профиля авторизованного пользователя.\n\n"
+            "- Не требует параметров в теле запроса.\n"
+            "- Требуется аутентификация через JWT."
+        ),
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={}
+        ),
+        responses={
+            200: openapi.Response(
+                description="Профиль пользователя успешно получен",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="ok"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=200),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Профиль пользователя успешно получен"),
+                        "data": openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID, example="82b74c74-2399-405a-83af-26761b6fcd5b"),
+                                "email": openapi.Schema(type=openapi.TYPE_STRING, example="user@example.com"),
+                                "username": openapi.Schema(type=openapi.TYPE_STRING, example="user123"),
+                                "nickname": openapi.Schema(type=openapi.TYPE_STRING, example="User"),
+                                "date_joined": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, example="2023-01-01T12:00:00Z"),
+                            }
+                        )
+                    }
+                )
+            ),
+            401: openapi.Response(
+                description="Не авторизован",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=401),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Требуется аутентификация"),
+                        "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
+                    }
+                )
+            )
+        }
+    )
+    def post(self, request):
+        serializer = CustomUserSerializer(request.user)
+        return Response(serializer.data)

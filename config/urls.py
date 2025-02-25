@@ -16,7 +16,7 @@ schema_view = get_schema_view(
     openapi.Info(
         title="inHookah API",
         default_version='v1',
-        description="API documentation for the Tobacco Mix Management System",
+        description="API documentation",
     ),
     public=False,  # Не делаем документацию публичной
     permission_classes=(permissions.IsAuthenticated,),

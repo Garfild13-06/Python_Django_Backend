@@ -41,8 +41,13 @@ class CustomUserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = (
-            'nickname', 'avatar', 'first_name', 'username')  # Поля, которые будут включены в сериализатор
+            'nickname', 'avatar', 'username')  # Поля, которые будут включены в сериализатор
         read_only_fields = ('email',)  # Поле email будет только для чтения, его нельзя изменять
+
+    def validate_nickname(self, value):
+        if CustomUser.objects.filter(nickname=value).exclude(id=self.instance.id).exists():
+            raise serializers.ValidationError("Этот никнейм уже занят.")
+        return value
 
 
 # Сериализатор для изменения пароля
@@ -63,3 +68,4 @@ class CustomSetPasswordSerializer(SetPasswordSerializer):
             'tobacco_smokiness': representation.pop('tobacco_smokiness')
         }
         return representation
+
