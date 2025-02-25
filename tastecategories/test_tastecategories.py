@@ -74,7 +74,6 @@ def test_list_tastecategories_no_token(api_client):
     """Тест получения списка категорий вкусов без токена."""
     url = reverse("tastecategories-list")
     response = api_client.post(url, format="json")
-    print(response)
     assert response.status_code == 200
 
 

@@ -112,7 +112,6 @@ def test_tobacco_detail_invalid_id(api_client):
     url = reverse("tobaccos-detail")
     data = {"id": "ffffffff-ffff-ffff-ffff-ffffffffffff"}
     response = api_client.post(url, data=data, format="json")
-    print(response)
     assert response.status_code == 404
 
 

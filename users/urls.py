@@ -28,15 +28,17 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 urlpatterns = [
     # Пользователи
     path('api/v1/users/list/', UserListAPIView.as_view(), name='user-list'),
-    # path('api/v1/users/detail/', UserDetailAPIView.as_view(), name='user-detail'),
+    path('api/v1/users/detail/', UserDetailAPIView.as_view(), name='user-detail'),
     path('api/v1/users/create/', UserCreateAPIView.as_view(), name='user-create'),
     path('api/v1/users/update/', UserUpdateAPIView.as_view(), name='user-update'),
     path('api/v1/users/partial-update/', UserPartialUpdateAPIView.as_view(), name='user-partial-update'),
     path('api/v1/users/delete/', UserDeleteAPIView.as_view(), name='user-delete'),
+
+    # Профиль пользователя
     path('api/v1/my_profile/', UserProfileView.as_view(), name='user-profile'),
 
     # Токены
-    path('api/v1/jwt/create/', TokenObtainPairView.as_view(), name='token-obtain-pair'),
-    path('api/v1/jwt/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
-    path('api/v1/jwt/verify/', TokenVerifyView.as_view(), name='token-verify'),
+    path('api/v1/jwt/create/', TokenObtainPairView.as_view(), name='jwt-create'),
+    path('api/v1/jwt/refresh/', TokenRefreshView.as_view(), name='jwt-refresh'),
+    path('api/v1/jwt/verify/', TokenVerifyView.as_view(), name='jwt-verify'),
 ]
