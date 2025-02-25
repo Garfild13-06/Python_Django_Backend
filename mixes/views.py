@@ -6,6 +6,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.authentication import JWTAuthentication
+
+from tobaccos.models import Tobaccos
 from .models import Mixes, MixLikes, MixFavorites
 from utils.CustomLimitOffsetPagination import CustomLimitOffsetPagination
 from .serializers import MixesListSerializer, MixesDetailSerializer, MixesSerializer
@@ -989,4 +991,184 @@ class UserFavoritedMixesView(APIView):
         paginator = CustomLimitOffsetPagination()
         page = paginator.paginate_queryset(favorited_mixes, request)
         serializer = MixesSerializer(page, many=True, context={'request': request})
+        return paginator.get_paginated_response(serializer.data)
+
+
+class MixesContainedAPIView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    @swagger_auto_schema(
+        tags=['Миксы'],
+        operation_summary="Получение списка миксов, содержащих указанный табак",
+        operation_description=(
+                "Возвращает пагинированный список миксов, которые содержат табак с указанным ID.\n\n"
+                "- Требуется передать `id` табака в теле запроса.\n"
+                "- Поддерживает пагинацию через параметры `limit` и `offset`."
+        ),
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['id'],
+            properties={
+                'id': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format=openapi.FORMAT_UUID,
+                    description="ID табака",
+                    example="123e4567-e89b-12d3-a456-426614174000"
+                ),
+                'limit': openapi.Schema(
+                    type=openapi.TYPE_INTEGER,
+                    description="Максимальное количество записей",
+                    example=10
+                ),
+                'offset': openapi.Schema(
+                    type=openapi.TYPE_INTEGER,
+                    description="Смещение для пагинации",
+                    example=0
+                ),
+            }
+        ),
+        responses={
+            200: openapi.Response(
+                description="Список миксов успешно получен",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="ok"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=200),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING,
+                                                  example="Mixes containing the tobacco retrieved successfully"),
+                        "data": openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                "results": openapi.Schema(
+                                    type=openapi.TYPE_ARRAY,
+                                    items=openapi.Schema(
+                                        type=openapi.TYPE_OBJECT,
+                                        properties={
+                                            "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID,
+                                                                 example="550e8400-e29b-41d4-a716-446655440000"),
+                                            "name": openapi.Schema(type=openapi.TYPE_STRING, example="Fruit Mix"),
+                                            "description": openapi.Schema(type=openapi.TYPE_STRING,
+                                                                          example="Сочный фруктовый микс"),
+                                            "banner": openapi.Schema(type=openapi.TYPE_STRING,
+                                                                     format=openapi.FORMAT_URI,
+                                                                     example="http://localhost:8000/media/mixes/fruit_mix.jpg"),
+                                            "created": openapi.Schema(type=openapi.TYPE_STRING,
+                                                                      format=openapi.FORMAT_DATETIME,
+                                                                      example="2023-01-01T12:00:00Z"),
+                                            "likes_count": openapi.Schema(type=openapi.TYPE_INTEGER, example=5),
+                                            "is_liked": openapi.Schema(type=openapi.TYPE_BOOLEAN, example=False),
+                                            "is_favorited": openapi.Schema(type=openapi.TYPE_BOOLEAN, example=False),
+                                            "categories": openapi.Schema(
+                                                type=openapi.TYPE_ARRAY,
+                                                items=openapi.Schema(
+                                                    type=openapi.TYPE_OBJECT,
+                                                    properties={
+                                                        "id": openapi.Schema(type=openapi.TYPE_STRING,
+                                                                             format=openapi.FORMAT_UUID,
+                                                                             example="123e4567-e89b-12d3-a456-426614174000"),
+                                                        "name": openapi.Schema(type=openapi.TYPE_STRING,
+                                                                               example="Фруктовые")
+                                                    }
+                                                )
+                                            ),
+                                            "goods": openapi.Schema(
+                                                type=openapi.TYPE_ARRAY,
+                                                items=openapi.Schema(
+                                                    type=openapi.TYPE_OBJECT,
+                                                    properties={
+                                                        "tobacco": openapi.Schema(
+                                                            type=openapi.TYPE_OBJECT,
+                                                            properties={
+                                                                "id": openapi.Schema(type=openapi.TYPE_STRING,
+                                                                                     format=openapi.FORMAT_UUID,
+                                                                                     example="123e4567-e89b-12d3-a456-426614174000"),
+                                                                "taste": openapi.Schema(type=openapi.TYPE_STRING,
+                                                                                        example="Apple"),
+                                                                "manufacturer": openapi.Schema(type=openapi.TYPE_STRING,
+                                                                                               example="DarkSide"),
+                                                                "image": openapi.Schema(type=openapi.TYPE_STRING,
+                                                                                        format=openapi.FORMAT_URI,
+                                                                                        example="http://localhost:8000/media/tobaccos/apple.jpg")
+                                                            }
+                                                        ),
+                                                        "weight": openapi.Schema(type=openapi.TYPE_INTEGER, example=10)
+                                                    }
+                                                )
+                                            ),
+                                            "author": openapi.Schema(
+                                                type=openapi.TYPE_OBJECT,
+                                                properties={
+                                                    "id": openapi.Schema(type=openapi.TYPE_STRING,
+                                                                         format=openapi.FORMAT_UUID,
+                                                                         example="123e4567-e89b-12d3-a456-426614174000"),
+                                                    "email": openapi.Schema(type=openapi.TYPE_STRING,
+                                                                            example="author@example.com"),
+                                                    "username": openapi.Schema(type=openapi.TYPE_STRING,
+                                                                               example="author123"),
+                                                    "nickname": openapi.Schema(type=openapi.TYPE_STRING,
+                                                                               example="Author"),
+                                                    "avatar": openapi.Schema(type=openapi.TYPE_STRING,
+                                                                             format=openapi.FORMAT_URI,
+                                                                             example="http://localhost:8000/media/avatars/author.jpg"),
+                                                    "date_joined": openapi.Schema(type=openapi.TYPE_STRING,
+                                                                                  format=openapi.FORMAT_DATETIME,
+                                                                                  example="2023-01-01T12:00:00Z")
+                                                }
+                                            )
+                                        }
+                                    )
+                                ),
+                                "count": openapi.Schema(type=openapi.TYPE_INTEGER, example=1),
+                                "next_offset": openapi.Schema(type=openapi.TYPE_INTEGER, example=10),
+                                "previous_offset": openapi.Schema(type=openapi.TYPE_INTEGER, example=0),
+                            }
+                        )
+                    }
+                )
+            ),
+            400: openapi.Response(
+                description="Некорректные данные в теле запроса",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=400),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Tobacco ID is required"),
+                        "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
+                    }
+                )
+            ),
+            404: openapi.Response(
+                description="Табак не найден",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=404),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Tobacco not found"),
+                        "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
+                    }
+                )
+            )
+        }
+    )
+    def post(self, request):
+        tobacco_id = request.data.get('id')
+        if not tobacco_id:
+            return Response({"status": "bad", "code": 400, "message": "Tobacco ID is required", "data": None},
+                            status=400)
+
+        try:
+            tobacco = Tobaccos.objects.get(id=tobacco_id)
+        except (ValueError, Tobaccos.DoesNotExist):
+            return Response({"status": "bad", "code": 404, "message": "Tobacco not found", "data": None}, status=404)
+
+        mixes = Mixes.objects.filter(compares__tobacco=tobacco)
+
+        paginator = CustomLimitOffsetPagination()
+        page = paginator.paginate_queryset(mixes, request)
+        context = {'request': request}
+        serializer = MixesListSerializer(page, many=True, context=context)
         return paginator.get_paginated_response(serializer.data)

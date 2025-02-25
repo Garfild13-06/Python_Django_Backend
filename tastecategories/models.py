@@ -12,6 +12,7 @@ class TasteCategories(models.Model):
     class Meta:
         verbose_name = "Категория вкуса"
         verbose_name_plural = "Категории вкусов"
+        db_table = "app_tastecategories"
 
     def __str__(self):
         return self.name

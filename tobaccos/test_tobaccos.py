@@ -39,12 +39,12 @@ def get_token(api_client, create_user):
 
 
 @pytest.fixture
-def create_manufacturer():
-    """Создание тестового производителя."""
+def create_manufacturer(db):
     manufacturer = Manufacturers.objects.create(
         name="Test Manufacturer",
         description="Test Description",
     )
+    manufacturer.save()  # Ensure the object is saved
     return manufacturer
 
 
@@ -130,6 +130,7 @@ def test_create_tobacco_with_token(api_client, get_token, create_manufacturer):
         "tobacco_smokiness": "medium",
     }
     response = api_client.post(url, data=data, format="json")
+    print(response)
     assert response.status_code == 201
     assert response.json()["data"]["taste"] == "New Tobacco"
 

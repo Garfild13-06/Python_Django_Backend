@@ -1,12 +1,14 @@
 from rest_framework import serializers
+
+from manufacturers.models import Manufacturers
 from tobaccos.models import Tobaccos
 
 
 class TobaccosSerializer(serializers.ModelSerializer):
-    manufacturer = serializers.StringRelatedField()  # Выводит название производителя
+    manufacturer = serializers.PrimaryKeyRelatedField(queryset=Manufacturers.objects.all())
     class Meta:
         model = Tobaccos
-        fields = ['id', 'taste', 'manufacturer', 'image', 'description']  # Поля для отображения товаров
+        fields = ['taste', 'manufacturer', 'description', 'tobacco_strength']
 
 
 class TobaccosListSerializer(serializers.ModelSerializer):
