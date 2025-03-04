@@ -28,12 +28,22 @@ class CustomUserSerializer(serializers.ModelSerializer):
         model = CustomUser
         fields = ('id', 'email', 'username', 'nickname', 'avatar', 'date_joined')
 
+    # def get_avatar(self, obj):
+    #     if obj.avatar:
+    #         request = self.context.get('request')
+    #         avatar_url = obj.avatar.url
+    #         return request.build_absolute_uri(avatar_url)
+    #     return ""
+
     def get_avatar(self, obj):
+        """
+        Возвращает полный URL изображения.
+        """
         if obj.avatar:
-            request = self.context.get('request')
-            avatar_url = obj.avatar.url
-            return request.build_absolute_uri(avatar_url)
-        return ""
+            request = self.context.get('request')  # Получаем объект запроса из контекста
+            if request:
+                return request.build_absolute_uri(obj.avatar.url)  # Формируем полный URL
+        return None  # Если изображение отсутствует, возвращаем None
 
 
 # Сериализатор для обновления пользователя
@@ -68,4 +78,3 @@ class CustomSetPasswordSerializer(SetPasswordSerializer):
             'tobacco_smokiness': representation.pop('tobacco_smokiness')
         }
         return representation
-

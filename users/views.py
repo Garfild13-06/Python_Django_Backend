@@ -1,3 +1,4 @@
+import sentry_sdk
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
@@ -18,16 +19,18 @@ class UserListAPIView(APIView):
         tags=['Пользователи'],
         operation_summary="Получение списка пользователей",
         operation_description=(
-            "Возвращает список всех пользователей с возможностью фильтрации по email.\n\n"
-            "- Поддерживает фильтрацию через поле `email`.\n"
-            "- Поддерживает пагинацию через параметры `limit` и `offset`.\n"
-            "- Требуется аутентификация администратора через JWT."
+                "Возвращает список всех пользователей с возможностью фильтрации по email.\n\n"
+                "- Поддерживает фильтрацию через поле `email`.\n"
+                "- Поддерживает пагинацию через параметры `limit` и `offset`.\n"
+                "- Требуется аутентификация администратора через JWT."
         ),
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                'email': openapi.Schema(type=openapi.TYPE_STRING, description="Фильтр по email (необязательно)", example="user@example.com"),
-                'limit': openapi.Schema(type=openapi.TYPE_INTEGER, description="Максимальное количество записей на странице", example=10),
+                'email': openapi.Schema(type=openapi.TYPE_STRING, description="Фильтр по email (необязательно)",
+                                        example="user@example.com"),
+                'limit': openapi.Schema(type=openapi.TYPE_INTEGER,
+                                        description="Максимальное количество записей на странице", example=10),
                 'offset': openapi.Schema(type=openapi.TYPE_INTEGER, description="Смещение для пагинации", example=0),
             }
         ),
@@ -39,7 +42,8 @@ class UserListAPIView(APIView):
                     properties={
                         "status": openapi.Schema(type=openapi.TYPE_STRING, example="ok"),
                         "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=200),
-                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Список пользователей успешно получен"),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING,
+                                                  example="Список пользователей успешно получен"),
                         "data": openapi.Schema(
                             type=openapi.TYPE_OBJECT,
                             properties={
@@ -48,11 +52,15 @@ class UserListAPIView(APIView):
                                     items=openapi.Schema(
                                         type=openapi.TYPE_OBJECT,
                                         properties={
-                                            "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID, example="82b74c74-2399-405a-83af-26761b6fcd5b"),
-                                            "email": openapi.Schema(type=openapi.TYPE_STRING, example="user@example.com"),
+                                            "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID,
+                                                                 example="82b74c74-2399-405a-83af-26761b6fcd5b"),
+                                            "email": openapi.Schema(type=openapi.TYPE_STRING,
+                                                                    example="user@example.com"),
                                             "username": openapi.Schema(type=openapi.TYPE_STRING, example="user123"),
                                             "nickname": openapi.Schema(type=openapi.TYPE_STRING, example="User"),
-                                            "date_joined": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, example="2023-01-01T12:00:00Z"),
+                                            "date_joined": openapi.Schema(type=openapi.TYPE_STRING,
+                                                                          format=openapi.FORMAT_DATETIME,
+                                                                          example="2023-01-01T12:00:00Z"),
                                         }
                                     )
                                 ),
@@ -121,16 +129,17 @@ class UserDetailAPIView(APIView):
         tags=['Пользователи'],
         operation_summary="Получение информации о пользователе по ID",
         operation_description=(
-            "Возвращает детальную информацию о пользователе по его идентификатору.\n\n"
-            "- Требуется передать `id` в теле запроса.\n"
-            "- Доступно только администратору или авторизованному пользователю.\n"
-            "- Требуется аутентификация через JWT."
+                "Возвращает детальную информацию о пользователе по его идентификатору.\n\n"
+                "- Требуется передать `id` в теле запроса.\n"
+                "- Доступно только администратору или авторизованному пользователю.\n"
+                "- Требуется аутентификация через JWT."
         ),
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             required=['id'],
             properties={
-                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID, description="ID пользователя", example="82b74c74-2399-405a-83af-26761b6fcd5b"),
+                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID,
+                                     description="ID пользователя", example="82b74c74-2399-405a-83af-26761b6fcd5b"),
             }
         ),
         responses={
@@ -141,15 +150,18 @@ class UserDetailAPIView(APIView):
                     properties={
                         "status": openapi.Schema(type=openapi.TYPE_STRING, example="ok"),
                         "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=200),
-                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Информация о пользователе успешно получена"),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING,
+                                                  example="Информация о пользователе успешно получена"),
                         "data": openapi.Schema(
                             type=openapi.TYPE_OBJECT,
                             properties={
-                                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID, example="82b74c74-2399-405a-83af-26761b6fcd5b"),
+                                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID,
+                                                     example="82b74c74-2399-405a-83af-26761b6fcd5b"),
                                 "email": openapi.Schema(type=openapi.TYPE_STRING, example="user@example.com"),
                                 "username": openapi.Schema(type=openapi.TYPE_STRING, example="user123"),
                                 "nickname": openapi.Schema(type=openapi.TYPE_STRING, example="User"),
-                                "date_joined": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, example="2023-01-01T12:00:00Z"),
+                                "date_joined": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME,
+                                                              example="2023-01-01T12:00:00Z"),
                             }
                         )
                     }
@@ -198,7 +210,8 @@ class UserDetailAPIView(APIView):
                     properties={
                         "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
                         "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=404),
-                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Пользователь с указанным ID не найден"),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING,
+                                                  example="Пользователь с указанным ID не найден"),
                         "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
                     }
                 )
@@ -224,17 +237,20 @@ class UserCreateAPIView(APIView):
         tags=['Пользователи'],
         operation_summary="Создание нового пользователя",
         operation_description=(
-            "Создаёт нового пользователя с указанными данными.\n\n"
-            "- Требуются поля `email`, `username` и `password`.\n"
-            "- Доступно всем пользователям, не требует аутентификации."
+                "Создаёт нового пользователя с указанными данными.\n\n"
+                "- Требуются поля `email`, `username` и `password`.\n"
+                "- Доступно всем пользователям, не требует аутентификации."
         ),
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             required=['email', 'username', 'password'],
             properties={
-                "email": openapi.Schema(type=openapi.TYPE_STRING, description="Email пользователя", example="newuser@example.com"),
-                "username": openapi.Schema(type=openapi.TYPE_STRING, description="Имя пользователя", example="newuser123"),
-                "password": openapi.Schema(type=openapi.TYPE_STRING, description="Пароль пользователя", example="securepassword123"),
+                "email": openapi.Schema(type=openapi.TYPE_STRING, description="Email пользователя",
+                                        example="newuser@example.com"),
+                "username": openapi.Schema(type=openapi.TYPE_STRING, description="Имя пользователя",
+                                           example="newuser123"),
+                "password": openapi.Schema(type=openapi.TYPE_STRING, description="Пароль пользователя",
+                                           example="securepassword123"),
             }
         ),
         responses={
@@ -249,8 +265,10 @@ class UserCreateAPIView(APIView):
                         "data": openapi.Schema(
                             type=openapi.TYPE_OBJECT,
                             properties={
-                                "message": openapi.Schema(type=openapi.TYPE_STRING, example="User created successfully"),
-                                "user_id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID, example="0084f87f-75df-42ff-965f-69eb711a66ff"),
+                                "message": openapi.Schema(type=openapi.TYPE_STRING,
+                                                          example="User created successfully"),
+                                "user_id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID,
+                                                          example="0084f87f-75df-42ff-965f-69eb711a66ff"),
                             }
                         )
                     }
@@ -290,19 +308,23 @@ class UserUpdateAPIView(APIView):
         tags=['Пользователи'],
         operation_summary="Полное обновление данных пользователя",
         operation_description=(
-            "Обновляет все поля пользователя по его ID.\n\n"
-            "- Требуется передать `id` и обновляемые данные.\n"
-            "- Доступно администратору или самому пользователю.\n"
-            "- Требуется аутентификация через JWT."
+                "Обновляет все поля пользователя по его ID.\n\n"
+                "- Требуется передать `id` и обновляемые данные.\n"
+                "- Доступно администратору или самому пользователю.\n"
+                "- Требуется аутентификация через JWT."
         ),
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             required=['id'],
             properties={
-                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID, description="ID пользователя", example="82b74c74-2399-405a-83af-26761b6fcd5b"),
-                "email": openapi.Schema(type=openapi.TYPE_STRING, description="Email пользователя", example="updateduser@example.com"),
-                "username": openapi.Schema(type=openapi.TYPE_STRING, description="Имя пользователя", example="updateduser123"),
-                "nickname": openapi.Schema(type=openapi.TYPE_STRING, description="Никнейм пользователя", example="UpdatedUser"),
+                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID,
+                                     description="ID пользователя", example="82b74c74-2399-405a-83af-26761b6fcd5b"),
+                "email": openapi.Schema(type=openapi.TYPE_STRING, description="Email пользователя",
+                                        example="updateduser@example.com"),
+                "username": openapi.Schema(type=openapi.TYPE_STRING, description="Имя пользователя",
+                                           example="updateduser123"),
+                "nickname": openapi.Schema(type=openapi.TYPE_STRING, description="Никнейм пользователя",
+                                           example="UpdatedUser"),
             }
         ),
         responses={
@@ -313,15 +335,18 @@ class UserUpdateAPIView(APIView):
                     properties={
                         "status": openapi.Schema(type=openapi.TYPE_STRING, example="ok"),
                         "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=200),
-                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Данные пользователя успешно обновлены"),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING,
+                                                  example="Данные пользователя успешно обновлены"),
                         "data": openapi.Schema(
                             type=openapi.TYPE_OBJECT,
                             properties={
-                                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID, example="82b74c74-2399-405a-83af-26761b6fcd5b"),
+                                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID,
+                                                     example="82b74c74-2399-405a-83af-26761b6fcd5b"),
                                 "email": openapi.Schema(type=openapi.TYPE_STRING, example="updateduser@example.com"),
                                 "username": openapi.Schema(type=openapi.TYPE_STRING, example="updateduser123"),
                                 "nickname": openapi.Schema(type=openapi.TYPE_STRING, example="UpdatedUser"),
-                                "date_joined": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, example="2023-01-01T12:00:00Z"),
+                                "date_joined": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME,
+                                                              example="2023-01-01T12:00:00Z"),
                             }
                         )
                     }
@@ -334,7 +359,8 @@ class UserUpdateAPIView(APIView):
                     properties={
                         "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
                         "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=400),
-                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Ошибка при обновлении пользователя"),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING,
+                                                  example="Ошибка при обновлении пользователя"),
                         "data": openapi.Schema(type=openapi.TYPE_OBJECT, example={"email": ["This field is required"]})
                     }
                 )
@@ -370,7 +396,8 @@ class UserUpdateAPIView(APIView):
                     properties={
                         "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
                         "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=404),
-                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Пользователь с указанным ID не найден"),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING,
+                                                  example="Пользователь с указанным ID не найден"),
                         "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
                     }
                 )
@@ -399,19 +426,23 @@ class UserPartialUpdateAPIView(APIView):
         tags=['Пользователи'],
         operation_summary="Частичное обновление данных пользователя",
         operation_description=(
-            "Обновляет указанные поля пользователя по его ID.\n\n"
-            "- Требуется передать `id` и обновляемые данные.\n"
-            "- Доступно администратору или самому пользователю.\n"
-            "- Требуется аутентификация через JWT."
+                "Обновляет указанные поля пользователя по его ID.\n\n"
+                "- Требуется передать `id` и обновляемые данные.\n"
+                "- Доступно администратору или самому пользователю.\n"
+                "- Требуется аутентификация через JWT."
         ),
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             required=['id'],
             properties={
-                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID, description="ID пользователя", example="82b74c74-2399-405a-83af-26761b6fcd5b"),
-                "email": openapi.Schema(type=openapi.TYPE_STRING, description="Email пользователя", example="updateduser@example.com"),
-                "username": openapi.Schema(type=openapi.TYPE_STRING, description="Имя пользователя", example="updateduser123"),
-                "nickname": openapi.Schema(type=openapi.TYPE_STRING, description="Никнейм пользователя", example="UpdatedUser"),
+                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID,
+                                     description="ID пользователя", example="82b74c74-2399-405a-83af-26761b6fcd5b"),
+                "email": openapi.Schema(type=openapi.TYPE_STRING, description="Email пользователя",
+                                        example="updateduser@example.com"),
+                "username": openapi.Schema(type=openapi.TYPE_STRING, description="Имя пользователя",
+                                           example="updateduser123"),
+                "nickname": openapi.Schema(type=openapi.TYPE_STRING, description="Никнейм пользователя",
+                                           example="UpdatedUser"),
             }
         ),
         responses={
@@ -422,15 +453,18 @@ class UserPartialUpdateAPIView(APIView):
                     properties={
                         "status": openapi.Schema(type=openapi.TYPE_STRING, example="ok"),
                         "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=200),
-                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Данные пользователя успешно обновлены"),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING,
+                                                  example="Данные пользователя успешно обновлены"),
                         "data": openapi.Schema(
                             type=openapi.TYPE_OBJECT,
                             properties={
-                                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID, example="82b74c74-2399-405a-83af-26761b6fcd5b"),
+                                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID,
+                                                     example="82b74c74-2399-405a-83af-26761b6fcd5b"),
                                 "email": openapi.Schema(type=openapi.TYPE_STRING, example="updateduser@example.com"),
                                 "username": openapi.Schema(type=openapi.TYPE_STRING, example="updateduser123"),
                                 "nickname": openapi.Schema(type=openapi.TYPE_STRING, example="UpdatedUser"),
-                                "date_joined": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, example="2023-01-01T12:00:00Z"),
+                                "date_joined": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME,
+                                                              example="2023-01-01T12:00:00Z"),
                             }
                         )
                     }
@@ -443,8 +477,10 @@ class UserPartialUpdateAPIView(APIView):
                     properties={
                         "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
                         "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=400),
-                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Ошибка при обновлении пользователя"),
-                        "data": openapi.Schema(type=openapi.TYPE_OBJECT, example={"nickname": ["This field may not be blank"]})
+                        "message": openapi.Schema(type=openapi.TYPE_STRING,
+                                                  example="Ошибка при обновлении пользователя"),
+                        "data": openapi.Schema(type=openapi.TYPE_OBJECT,
+                                               example={"nickname": ["This field may not be blank"]})
                     }
                 )
             ),
@@ -479,7 +515,8 @@ class UserPartialUpdateAPIView(APIView):
                     properties={
                         "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
                         "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=404),
-                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Пользователь с указанным ID не найден"),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING,
+                                                  example="Пользователь с указанным ID не найден"),
                         "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
                     }
                 )
@@ -508,16 +545,17 @@ class UserDeleteAPIView(APIView):
         tags=['Пользователи'],
         operation_summary="Удаление пользователя",
         operation_description=(
-            "Удаляет пользователя по его ID.\n\n"
-            "- Требуется передать `id` в теле запроса.\n"
-            "- Доступно только администратору и самому пользователю.\n"
-            "- Требуется аутентификация через JWT."
+                "Удаляет пользователя по его ID.\n\n"
+                "- Требуется передать `id` в теле запроса.\n"
+                "- Доступно только администратору и самому пользователю.\n"
+                "- Требуется аутентификация через JWT."
         ),
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             required=['id'],
             properties={
-                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID, description="ID пользователя", example="82b74c74-2399-405a-83af-26761b6fcd5b"),
+                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID,
+                                     description="ID пользователя", example="82b74c74-2399-405a-83af-26761b6fcd5b"),
             }
         ),
         responses={
@@ -576,7 +614,8 @@ class UserDeleteAPIView(APIView):
                     properties={
                         "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
                         "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=404),
-                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Пользователь с указанным ID не найден"),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING,
+                                                  example="Пользователь с указанным ID не найден"),
                         "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
                     }
                 )
@@ -595,14 +634,15 @@ class UserDeleteAPIView(APIView):
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
+    sentry_sdk.set_tag("view", "UserProfileView")
 
     @swagger_auto_schema(
         tags=['Пользователи'],
         operation_summary="Получение профиля текущего пользователя",
         operation_description=(
-            "Возвращает данные профиля авторизованного пользователя.\n\n"
-            "- Не требует параметров в теле запроса.\n"
-            "- Требуется аутентификация через JWT."
+                "Возвращает данные профиля авторизованного пользователя.\n\n"
+                "- Не требует параметров в теле запроса.\n"
+                "- Требуется аутентификация через JWT."
         ),
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
@@ -616,15 +656,18 @@ class UserProfileView(APIView):
                     properties={
                         "status": openapi.Schema(type=openapi.TYPE_STRING, example="ok"),
                         "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=200),
-                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Профиль пользователя успешно получен"),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING,
+                                                  example="Профиль пользователя успешно получен"),
                         "data": openapi.Schema(
                             type=openapi.TYPE_OBJECT,
                             properties={
-                                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID, example="82b74c74-2399-405a-83af-26761b6fcd5b"),
+                                "id": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_UUID,
+                                                     example="82b74c74-2399-405a-83af-26761b6fcd5b"),
                                 "email": openapi.Schema(type=openapi.TYPE_STRING, example="user@example.com"),
                                 "username": openapi.Schema(type=openapi.TYPE_STRING, example="user123"),
                                 "nickname": openapi.Schema(type=openapi.TYPE_STRING, example="User"),
-                                "date_joined": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, example="2023-01-01T12:00:00Z"),
+                                "date_joined": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME,
+                                                              example="2023-01-01T12:00:00Z"),
                             }
                         )
                     }
@@ -646,4 +689,4 @@ class UserProfileView(APIView):
     )
     def post(self, request):
         serializer = CustomUserSerializer(request.user)
-        return Response(serializer.data)
+        return Response(serializer.data)  # Логируем ошибку

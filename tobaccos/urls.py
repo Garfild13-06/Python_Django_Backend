@@ -14,10 +14,17 @@ from tobaccos.views import (
 
 urlpatterns = [
                   path('api/v1/tobaccos/list/', TobaccoListAPIView.as_view(), name='tobaccos-list'),
+                  path('api/v1/tobaccos/list', TobaccoListAPIView.as_view(), name='tobaccos-list'),
                   path('api/v1/tobaccos/detail/', TobaccoDetailAPIView.as_view(), name='tobaccos-detail'),
+                  path('api/v1/tobaccos/detail', TobaccoDetailAPIView.as_view(), name='tobaccos-detail'),
                   path('api/v1/tobaccos/create/', TobaccoCreateAPIView.as_view(), name='tobaccos-create'),
+                  path('api/v1/tobaccos/create', TobaccoCreateAPIView.as_view(), name='tobaccos-create'),
                   path('api/v1/tobaccos/update/<uuid:pk>/', TobaccoUpdateAPIView.as_view(), name='tobaccos-update'),
+                  path('api/v1/tobaccos/update/<uuid:pk>', TobaccoUpdateAPIView.as_view(), name='tobaccos-update'),
                   path('api/v1/tobaccos/partial-update/<uuid:pk>/', TobaccoPartialUpdateAPIView.as_view(),
                        name='tobaccos-partial-update'),
+                  path('api/v1/tobaccos/partial-update/<uuid:pk>', TobaccoPartialUpdateAPIView.as_view(),
+                       name='tobaccos-partial-update'),
                   path('api/v1/tobaccos/delete/<uuid:pk>/', TobaccoDestroyAPIView.as_view(), name='tobaccos-delete'),
+                  path('api/v1/tobaccos/delete/<uuid:pk>', TobaccoDestroyAPIView.as_view(), name='tobaccos-delete'),
               ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

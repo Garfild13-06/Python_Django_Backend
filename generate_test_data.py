@@ -127,6 +127,7 @@ def create_mixes(users, categories, tobaccos, bowls):
     """Создаёт миксы."""
     mixes = []
     for _ in range(NUM_MIXES):
+        # Создаем микс без указания bowl, так как оно будет установлено позже
         mix = Mixes.objects.create(
             name=fake.word().capitalize(),
             description=fake.text(max_nb_chars=300),
@@ -136,8 +137,17 @@ def create_mixes(users, categories, tobaccos, bowls):
         )
         # Добавляем категории
         mix.categories.add(*random.sample(categories, k=random.randint(1, len(categories))))
-        # Связываем микс с чашей
-        MixBowl.objects.create(mix=mix, bowl=random.choice(bowls))
+
+        # Создаем объект MixBowl, связывая его с миксом и случайной чашей
+        mix_bowl = MixBowl.objects.create(
+            mix=mix,
+            bowl=random.choice(bowls)
+        )
+
+        # Устанавливаем поле bowl в миксе на созданный MixBowl
+        mix.bowl = mix_bowl
+        mix.save()
+
         # Добавляем табаки
         num_tobaccos_in_mix = random.randint(1, 5)
         for _ in range(num_tobaccos_in_mix):

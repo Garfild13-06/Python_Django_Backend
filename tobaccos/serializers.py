@@ -18,7 +18,13 @@ class TobaccosListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tobaccos
         fields = [
-            'id', 'taste', 'manufacturer', 'image'
+            'id',
+            'taste',
+            'image',
+            'manufacturer',
+            'tobacco_strength',
+            'tobacco_resistance',
+            'tobacco_smokiness'
         ]
 
     def get_image(self, obj):
@@ -30,6 +36,16 @@ class TobaccosListSerializer(serializers.ModelSerializer):
             if request:
                 return request.build_absolute_uri(obj.image.url)  # Формируем полный URL
         return None  # Если изображение отсутствует, возвращаем None
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        # Группируем параметры в поле "params"
+        representation['params'] = {
+            'strength': representation.pop('tobacco_strength'),
+            'resistance': representation.pop('tobacco_resistance'),
+            'smokiness': representation.pop('tobacco_smokiness')
+        }
+        return representation
 
 
 class TobaccosDetailSerializer(serializers.ModelSerializer):
@@ -63,8 +79,8 @@ class TobaccosDetailSerializer(serializers.ModelSerializer):
         representation = super().to_representation(instance)
         # Группируем параметры в поле "params"
         representation['params'] = {
-            'tobacco_strength': representation.pop('tobacco_strength'),
-            'tobacco_resistance': representation.pop('tobacco_resistance'),
-            'tobacco_smokiness': representation.pop('tobacco_smokiness')
+            'strength': representation.pop('tobacco_strength'),
+            'resistance': representation.pop('tobacco_resistance'),
+            'smokiness': representation.pop('tobacco_smokiness')
         }
         return representation

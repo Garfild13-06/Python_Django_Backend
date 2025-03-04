@@ -13,11 +13,13 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
-from django.db import connection
+import sentry_sdk
+# from django.db import connection
 from dotenv import load_dotenv
+from sentry_sdk.integrations.django import DjangoIntegration
 
-import main.middleware
-import utils.exception_handler
+# import main.middleware
+# import utils.exception_handler
 
 load_dotenv()
 
@@ -246,3 +248,20 @@ SIMPLE_JWT = {
 }
 
 # AUTH_PROFILE_MODULE = "account.UserProfile"
+
+sentry_sdk.init(
+    dsn=os.getenv('SENTRY_DSN'),
+    integrations=[DjangoIntegration()],
+    # Add data like request headers and IP for users,
+    # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+    send_default_pii=True,
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for tracing.
+    traces_sample_rate=1.0,
+    _experiments={
+        # Set continuous_profiling_auto_start to True
+        # to automatically start the profiler on when
+        # possible.
+        "continuous_profiling_auto_start": True,
+    },
+)
