@@ -14,4 +14,5 @@ urlpatterns = [
     path('api/v1/user/liked-mixes/', UserLikedMixesView.as_view(), name='user-liked-mixes'),
     path('api/v1/user/favorited-mixes/', UserFavoritedMixesView.as_view(), name='user-favorite-mixes'),
     path('api/v1/mixes/contained/', MixesContainedAPIView.as_view(), name='mixes-contained'),
+    path('api/v1/mixes/by_author/', MixesByAuthorAPIView.as_view(), name='mixes-by-author'),
 ]

@@ -249,6 +249,7 @@ SIMPLE_JWT = {
 
 # AUTH_PROFILE_MODULE = "account.UserProfile"
 
+# if os.getenv('SENTRY_LOG_ACTIVE'):
 sentry_sdk.init(
     dsn=os.getenv('SENTRY_DSN'),
     integrations=[DjangoIntegration()],

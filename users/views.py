@@ -225,7 +225,7 @@ class UserDetailAPIView(APIView):
         user = get_object_or_404(CustomUser, id=user_id)
         if not (request.user.is_staff or request.user.id == user.id):
             return Response({"error": "Permission denied"}, status=403)
-        serializer = CustomUserSerializer(user)
+        serializer = CustomUserSerializer(user, context={'request': request})
         return Response(serializer.data)
 
 
@@ -404,17 +404,27 @@ class UserUpdateAPIView(APIView):
             )
         }
     )
-    def put(self, request):
+    def put(self, request, *args, **kwargs):
+        # Получаем ID пользователя из данных запроса
         user_id = request.data.get('id')
         if not user_id:
             return Response({"error": "User ID is required"}, status=400)
+
+        # Находим пользователя
         user = get_object_or_404(CustomUser, id=user_id)
+
+        # Проверяем права доступа
         if not (request.user.is_staff or request.user.id == user.id):
             return Response({"error": "Permission denied"}, status=403)
+
+        # Сериализатор для обновления данных
         serializer = CustomUserUpdateSerializer(user, data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+
+            # Сериализатор для ответа с полным URL аватарки
+            response_serializer = CustomUserSerializer(user, context={'request': request})
+            return Response(response_serializer.data)
         return Response(serializer.errors, status=400)
 
 
@@ -523,17 +533,28 @@ class UserPartialUpdateAPIView(APIView):
             )
         }
     )
-    def patch(self, request):
+    def patch(self, request, *args, **kwargs):
+        # Получаем ID пользователя из данных запроса
         user_id = request.data.get('id')
         if not user_id:
             return Response({"error": "User ID is required"}, status=400)
+
+        # Находим пользователя
         user = get_object_or_404(CustomUser, id=user_id)
+
+        # Проверяем права доступа
         if not (request.user.is_staff or request.user.id == user.id):
             return Response({"error": "Permission denied"}, status=403)
+
+        # Сериализатор для обновления данных (partial=True для PATCH)
         serializer = CustomUserUpdateSerializer(user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+
+            # Сериализатор для ответа с полным URL аватарки
+            response_serializer = CustomUserSerializer(user, context={'request': request})
+            print(response_serializer)
+            return Response(response_serializer.data)
         return Response(serializer.errors, status=400)
 
 
@@ -688,5 +709,5 @@ class UserProfileView(APIView):
         }
     )
     def post(self, request):
-        serializer = CustomUserSerializer(request.user)
+        serializer = CustomUserSerializer(request.user, context={'request': request})
         return Response(serializer.data)  # Логируем ошибку

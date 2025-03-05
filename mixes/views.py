@@ -1172,3 +1172,98 @@ class MixesContainedAPIView(APIView):
         context = {'request': request}
         serializer = MixesListSerializer(page, many=True, context=context)
         return paginator.get_paginated_response(serializer.data)
+
+
+class MixesByAuthorAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+    @swagger_auto_schema(
+        tags=['Миксы'],
+        operation_summary="Получение списка миксов по ID автора",
+        operation_description=
+        "Возвращает список миксов, созданных пользователем с указанным ID. Доступно только авторизованным пользователям через JWT.\n"
+        "- Требуется поле`author_id`.\n"
+        "- Поддерживает пагинацию через параметры `limit` и `offset`.\n",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['author_id'],
+            properties={
+                'author_id': openapi.Schema(type=openapi.TYPE_STRING, description="ID автора",
+                                            example="123e4567-e89b-12d3-a456-426614174000"),
+                'limit': openapi.Schema(type=openapi.TYPE_INTEGER, description="Максимальное количество записей",
+                                        example=10),
+                'offset': openapi.Schema(type=openapi.TYPE_INTEGER, description="Смещение для пагинации", example=0),
+            }
+        ),
+        responses={
+            200: openapi.Response(
+                description="Успешный ответ",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="ok"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=200),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Список миксов успешно получен"),
+                        "data": openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                "results": openapi.Schema(
+                                    type=openapi.TYPE_ARRAY,
+                                    items=openapi.Schema(
+                                        type=openapi.TYPE_OBJECT,
+                                        properties={
+                                            "id": openapi.Schema(type=openapi.TYPE_STRING,
+                                                                 example="550e8400-e29b-41d4-a716-446655440000"),
+                                            "name": openapi.Schema(type=openapi.TYPE_STRING, example="Fruit Mix"),
+                                            "description": openapi.Schema(type=openapi.TYPE_STRING,
+                                                                          example="Сочный фруктовый микс"),
+                                            "banner": openapi.Schema(type=openapi.TYPE_STRING,
+                                                                     example="http://localhost:8000/media/mixes/fruit_mix.jpg"),
+                                            "created": openapi.Schema(type=openapi.TYPE_STRING,
+                                                                      example="2023-01-01T12:00:00Z"),
+                                            "likes_count": openapi.Schema(type=openapi.TYPE_INTEGER, example=5),
+                                            "is_liked": openapi.Schema(type=openapi.TYPE_BOOLEAN, example=False),
+                                            "is_favorited": openapi.Schema(type=openapi.TYPE_BOOLEAN, example=False),
+                                            "categories": openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(
+                                                type=openapi.TYPE_OBJECT)),
+                                            "goods": openapi.Schema(type=openapi.TYPE_ARRAY,
+                                                                    items=openapi.Schema(type=openapi.TYPE_OBJECT)),
+                                            "author": openapi.Schema(type=openapi.TYPE_OBJECT),
+                                        }
+                                    )
+                                ),
+                                "count": openapi.Schema(type=openapi.TYPE_INTEGER, example=15),
+                                "next_offset": openapi.Schema(type=openapi.TYPE_INTEGER, example=10),
+                                "previous_offset": openapi.Schema(type=openapi.TYPE_INTEGER, example=0),
+                            }
+                        )
+                    }
+                )
+            ),
+            400: openapi.Response(description="Ошибка: author_id не указан"),
+            401: openapi.Response(description="Ошибка: не авторизован"),
+        }
+    )
+    def post(self, request):
+        author_id = request.data.get('author_id')
+        if not author_id:
+            return Response({
+                "status": "bad",
+                "code": 400,
+                "message": "Author ID is required",
+                "data": None
+            }, status=400)
+
+        # Фильтрация миксов по автору
+        mixes = Mixes.objects.filter(author_id=author_id)
+
+        # Пагинация (если используется в проекте)
+        paginator = CustomLimitOffsetPagination()
+        page = paginator.paginate_queryset(mixes, request)
+
+        # Сериализация данных
+        serializer = MixesListSerializer(page, many=True, context={'request': request})
+
+        # Формирование ответа с пагинацией
+        return paginator.get_paginated_response(serializer.data)

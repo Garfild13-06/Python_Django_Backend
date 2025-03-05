@@ -22,23 +22,13 @@ class CustomUserCreateSerializer(serializers.ModelSerializer):
 
 
 class CustomUserSerializer(serializers.ModelSerializer):
-    avatar = serializers.SerializerMethodField()
+    avatar = serializers.SerializerMethodField()  # Используем SerializerMethodField для формирования абсолютного URL
 
     class Meta:
         model = CustomUser
         fields = ('id', 'email', 'username', 'nickname', 'avatar', 'date_joined')
 
-    # def get_avatar(self, obj):
-    #     if obj.avatar:
-    #         request = self.context.get('request')
-    #         avatar_url = obj.avatar.url
-    #         return request.build_absolute_uri(avatar_url)
-    #     return ""
-
     def get_avatar(self, obj):
-        """
-        Возвращает полный URL изображения.
-        """
         if obj.avatar:
             request = self.context.get('request')  # Получаем объект запроса из контекста
             if request:
@@ -48,6 +38,8 @@ class CustomUserSerializer(serializers.ModelSerializer):
 
 # Сериализатор для обновления пользователя
 class CustomUserUpdateSerializer(serializers.ModelSerializer):
+    avatar = serializers.SerializerMethodField()  # Используем SerializerMethodField для формирования абсолютного URL
+
     class Meta:
         model = CustomUser
         fields = (
@@ -58,6 +50,13 @@ class CustomUserUpdateSerializer(serializers.ModelSerializer):
         if CustomUser.objects.filter(nickname=value).exclude(id=self.instance.id).exists():
             raise serializers.ValidationError("Этот никнейм уже занят.")
         return value
+
+    def get_avatar(self, obj):
+        if obj.avatar:
+            request = self.context.get('request')  # Получаем объект запроса из контекста
+            if request:
+                return request.build_absolute_uri(obj.avatar.url)  # Формируем полный URL
+        return None  # Если изображение отсутствует, возвращаем None
 
 
 # Сериализатор для изменения пароля

@@ -1,4 +1,6 @@
 from rest_framework import serializers
+
+from utils.to_camel_case import to_camel_case
 from .models import Mixes, MixTobacco, MixBowl
 from tobaccos.serializers import TobaccosSerializer, TobaccosListSerializer, TobaccosDetailSerializer
 from bowls.serializers import BowlsSerializer
@@ -22,6 +24,7 @@ class MixTobaccoListSerializer(serializers.ModelSerializer):
     class Meta:
         model = MixTobacco
         fields = ['tobacco', 'weight']
+
 
 
 class MixTobaccoDetailSerializer(serializers.ModelSerializer):
@@ -56,9 +59,17 @@ class MixesListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Mixes
         fields = [
-            'id', 'name', 'description', 'banner', 'created',
-            'likes_count', 'is_liked', 'is_favorited',
-            'categories', 'goods', 'author'
+            'id',
+            'name',
+            'description',
+            'banner',
+            'created',
+            'likes_count',
+            'is_liked',
+            'is_favorited',
+            'categories',
+            'goods',
+            'author'
         ]
 
     def get_likes_count(self, obj):
@@ -76,6 +87,13 @@ class MixesListSerializer(serializers.ModelSerializer):
             return obj.favorites.filter(user=request.user).exists()
         return False
 
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        camel_case_representation = {}
+        for key, value in representation.items():
+            camel_case_key = to_camel_case(key)
+            camel_case_representation[camel_case_key] = value
+        return camel_case_representation
 
 class MixesDetailSerializer(serializers.ModelSerializer):
     categories = TasteCategoriesSerializer(many=True, read_only=True)
@@ -109,6 +127,13 @@ class MixesDetailSerializer(serializers.ModelSerializer):
             return obj.favorites.filter(user=request.user).exists()
         return False
 
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        camel_case_representation = {}
+        for key, value in representation.items():
+            camel_case_key = to_camel_case(key)
+            camel_case_representation[camel_case_key] = value
+        return camel_case_representation
 
 class MixesSerializer(serializers.ModelSerializer):
     categories = TasteCategoriesSerializer(many=True, read_only=True)
@@ -141,3 +166,12 @@ class MixesSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             return obj.favorites.filter(user=request.user).exists()
         return False
+
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        camel_case_representation = {}
+        for key, value in representation.items():
+            camel_case_key = to_camel_case(key)
+            camel_case_representation[camel_case_key] = value
+        return camel_case_representation
