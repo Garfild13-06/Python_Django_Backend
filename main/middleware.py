@@ -93,10 +93,12 @@ class ResponseMiddleware:
             if 200 <= response.status_code < 300:
                 # Успешный ответ
                 # data = response.data
-                if "data" in response.data:
+                if "data" in response.data and isinstance(response.data["data"], dict):
                     data = response.data["data"]
+                    print(data)
                 else:
                     data = response.data
+                    print(data)
                 errors = None
             else:
                 # Ошибочный ответ

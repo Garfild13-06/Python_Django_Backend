@@ -1,7 +1,7 @@
 version: '3.9'
 
-#volumes:
-#  mysql_data:
+volumes:
+  mysql_data:
 
 services:
   mysql:

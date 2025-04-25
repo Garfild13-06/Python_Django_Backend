@@ -223,8 +223,11 @@ class UserDetailAPIView(APIView):
         if not user_id:
             return Response({"error": "User ID is required"}, status=400)
         user = get_object_or_404(CustomUser, id=user_id)
-        if not (request.user.is_staff or request.user.id == user.id):
-            return Response({"error": "Permission denied"}, status=403)
+        # if not (
+        #         request.user.is_staff
+        #         or request.user.id == user.id
+        # ):
+        #     return Response({"error": "Permission denied"}, status=403)
         serializer = CustomUserSerializer(user, context={'request': request})
         return Response(serializer.data)
 

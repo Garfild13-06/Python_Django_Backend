@@ -33,3 +33,4 @@ urlpatterns = [
     path('', include('users.urls')),  # Добавляем маршруты из users
     path('', include('tastecategories.urls')),  # Добавляем маршруты из users
 ]
+urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

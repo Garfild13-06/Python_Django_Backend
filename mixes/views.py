@@ -15,7 +15,7 @@ from .serializers import MixesListSerializer, MixesDetailSerializer, MixesSerial
 
 class MixesListAPIView(APIView):
     permission_classes = [AllowAny]
-    authentication_classes = []
+    authentication_classes = [JWTAuthentication]
 
     @swagger_auto_schema(
         tags=['Миксы'],
@@ -106,7 +106,7 @@ class MixesListAPIView(APIView):
 
 class MixDetailView(APIView):
     permission_classes = [AllowAny]
-    authentication_classes = []
+    authentication_classes = [JWTAuthentication]
 
     @swagger_auto_schema(
         tags=['Миксы'],

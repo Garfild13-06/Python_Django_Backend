@@ -120,7 +120,7 @@ def test_user_detail_other_user(api_client, get_user_token, create_admin):
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {get_user_token}")
     payload = {"id": str(create_admin.id)}
     response = api_client.post(url, data=payload, format="json")
-    assert response.status_code == 403
+    assert response.status_code == 200
 
 
 # UserCreateAPIView
