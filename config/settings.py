@@ -42,7 +42,8 @@ INSTALLED_APPS = [
     'tobaccos',
     'mixes',
     'users',
-    'tastecategories'
+    'tastecategories',
+    'selection'
 ]
 
 MIDDLEWARE = [

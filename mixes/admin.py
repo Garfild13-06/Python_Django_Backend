@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.contrib.admin.widgets import FilteredSelectMultiple
 from django import forms
+from django.core.exceptions import ValidationError
+from django.forms import ModelForm
 from django.utils.safestring import mark_safe
 
 from tastecategories.models import TasteCategories
@@ -29,17 +31,24 @@ class MixAdminForm(forms.ModelForm):
         fields = ['name', 'description', 'banner', 'categories']
 
 
+class MixesAdminForm(forms.ModelForm):
+    class Meta:
+        model = Mixes
+        fields = '__all__'
+
+    def clean_categories(self):
+        cats = self.cleaned_data['categories']
+        if cats.count() != 2:
+            raise ValidationError("Необходимо выбрать ровно 2 категории вкусов.")
+        return cats
+
+
 @admin.register(Mixes)
 class MixesAdmin(admin.ModelAdmin):
-    # Подключаем шаблон для отображения изображения в шапке
+    form = MixesAdminForm  # ПРИКРЕПИ новую форму
     change_form_template = 'admin/mixes/change_form.html'
-    #  Подключаем форму MixAdminForm для изменения формы выбора категорий
-    # form = MixAdminForm
-    # Исключаем поле выбора категорий по-умолчанию
-    # exclude = ["categories"]
     list_display = ["name", "description", "created", "banner_preview"]
     search_fields = ['name']
-    # Подключаем форму выбора табаков
     inlines = [MixTobaccoInline, MixBowlInline]
 
     # Функция для добавления превью изображения в общем списке миксов

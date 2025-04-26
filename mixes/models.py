@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 import uuid
 from bowls.models import Bowls
@@ -68,6 +69,9 @@ class Mixes(models.Model):
         except MixFavorites.DoesNotExist:
             pass
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
     class Meta:
         verbose_name = "Микс"
         verbose_name_plural = "Миксы"
@@ -92,7 +96,16 @@ class MixTobacco(models.Model):
         verbose_name="Табак",
         related_name="compares")
 
-    weight = models.IntegerField("%")
+    weight = models.PositiveIntegerField(verbose_name="Процент содержания табака")
+
+    def clean(self):
+        """Проверка: вес табака должен быть кратен 5."""
+        if self.weight % 5 != 0:
+            raise ValidationError({"weight": "Процент содержания табака должен быть кратным 5."})
+
+    def save(self, *args, **kwargs):
+        self.full_clean()  # Триггерим валидацию перед сохранением
+        super().save(*args, **kwargs)
 
     class Meta:
         db_table = "app_mixtobacco"

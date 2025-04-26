@@ -26,7 +26,6 @@ class MixTobaccoListSerializer(serializers.ModelSerializer):
         fields = ['tobacco', 'weight']
 
 
-
 class MixTobaccoDetailSerializer(serializers.ModelSerializer):
     tobacco = TobaccosDetailSerializer(read_only=True)
     weight = serializers.IntegerField()
@@ -47,6 +46,7 @@ class MixBowlSerializer(serializers.ModelSerializer):
         # Получаем данные чаши из поля bowl
         bowl_data = self.fields['bowl'].to_representation(instance.bowl)
         return bowl_data
+
 
 class MixesListSerializer(serializers.ModelSerializer):
     categories = TasteCategoriesSerializer(many=True, read_only=True)
@@ -95,6 +95,7 @@ class MixesListSerializer(serializers.ModelSerializer):
             camel_case_representation[camel_case_key] = value
         return camel_case_representation
 
+
 class MixesDetailSerializer(serializers.ModelSerializer):
     categories = TasteCategoriesSerializer(many=True, read_only=True)
     goods = MixTobaccoDetailSerializer(source='compares', many=True, read_only=True)  # Табаки
@@ -135,6 +136,7 @@ class MixesDetailSerializer(serializers.ModelSerializer):
             camel_case_representation[camel_case_key] = value
         return camel_case_representation
 
+
 class MixesSerializer(serializers.ModelSerializer):
     categories = TasteCategoriesSerializer(many=True, read_only=True)
     likes_count = serializers.SerializerMethodField()
@@ -167,7 +169,6 @@ class MixesSerializer(serializers.ModelSerializer):
             return obj.favorites.filter(user=request.user).exists()
         return False
 
-
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         camel_case_representation = {}
@@ -175,3 +176,10 @@ class MixesSerializer(serializers.ModelSerializer):
             camel_case_key = to_camel_case(key)
             camel_case_representation[camel_case_key] = value
         return camel_case_representation
+
+    def validate(self, data):
+        # categories через initial_data, потому что это ManyToMany
+        categories = self.initial_data.get('categories')
+        if categories and len(categories) != 2:
+            raise serializers.ValidationError("Микс должен содержать ровно 2 категории вкусов.")
+        return data

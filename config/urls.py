@@ -31,6 +31,8 @@ urlpatterns = [
     path('', include('tobaccos.urls')),  # Добавляем маршруты из tobaccos
     path('', include('mixes.urls')),  # Добавляем маршруты из mixes
     path('', include('users.urls')),  # Добавляем маршруты из users
-    path('', include('tastecategories.urls')),  # Добавляем маршруты из users
+    path('', include('tastecategories.urls')),  # Добавляем маршруты из tastecategories
+    path('', include('selection.urls')),  # Добавляем маршруты из selection
+
 ]
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
