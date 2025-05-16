@@ -1,4 +1,5 @@
 import sentry_sdk
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
@@ -306,6 +307,7 @@ class UserCreateAPIView(APIView):
 class UserUpdateAPIView(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
+    parser_classes = [MultiPartParser, FormParser]
 
     @swagger_auto_schema(
         tags=['Пользователи'],
@@ -434,6 +436,7 @@ class UserUpdateAPIView(APIView):
 class UserPartialUpdateAPIView(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
+    parser_classes = [MultiPartParser, FormParser]
 
     @swagger_auto_schema(
         tags=['Пользователи'],
@@ -556,7 +559,7 @@ class UserPartialUpdateAPIView(APIView):
 
             # Сериализатор для ответа с полным URL аватарки
             response_serializer = CustomUserSerializer(user, context={'request': request})
-            print(response_serializer)
+            # print(response_serializer)
             return Response(response_serializer.data)
         return Response(serializer.errors, status=400)
 

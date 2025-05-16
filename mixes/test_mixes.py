@@ -185,48 +185,47 @@ def test_delete_mix_with_token(api_client, get_token, create_mix):
     assert not Mixes.objects.filter(id=create_mix.id).exists()
 
 
-# Дополнительные тесты
 @pytest.mark.django_db
-def test_add_like_to_mix(api_client, get_token, create_mix, create_user):
-    """Тест добавления лайка к миксу."""
+@pytest.mark.parametrize(
+    "setup_like, expected_action",
+    [
+        (False, "liked"),  # Если лайка нет → добавляем
+        (True, "unliked"),  # Если лайк есть → удаляем
+    ]
+)
+def test_like_unlike_mix(api_client, get_token, create_mix, create_user, setup_like, expected_action):
+    """Тест добавления и удаления лайка к миксу."""
+    if setup_like:
+        MixLikes.objects.create(mix=create_mix, user=create_user)
+
     url = reverse("mix-like")
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {get_token['access']}")
     payload = {"mix_id": str(create_mix.id)}
     response = api_client.post(url, data=payload, format="json")
-    assert response.status_code == 201
-    assert MixLikes.objects.filter(mix=create_mix.id, user=create_user).exists()
+
+    assert response.status_code == 200
+    json_data = response.json()
+    assert json_data["data"]["action"] == expected_action
 
 
 @pytest.mark.django_db
-def test_remove_like_from_mix(api_client, get_token, create_mix, create_user):
-    """Тест удаления лайка из микса."""
-    MixLikes.objects.create(mix=create_mix, user=create_user)
-    url = reverse("mix-like")
+@pytest.mark.parametrize(
+    "setup_like, expected_action",
+    [
+        (False, "favorited"),  # Если лайка нет → добавляем
+        (True, "disfavorited"),  # Если лайк есть → удаляем
+    ]
+)
+def test_favorited_disfavorite_mix(api_client, get_token, create_mix, create_user, setup_like, expected_action):
+    """Тест добавления и удаления лайка к миксу."""
+    if setup_like:
+        MixFavorites.objects.create(mix=create_mix, user=create_user)
+
+    url = reverse("mix-favorite")
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {get_token['access']}")
     payload = {"mix_id": str(create_mix.id)}
     response = api_client.post(url, data=payload, format="json")
-    assert response.status_code == 204
-    assert not MixLikes.objects.filter(mix=create_mix.id, user=create_user).exists()
 
-
-@pytest.mark.django_db
-def test_add_mix_to_favorites(api_client, get_token, create_mix, create_user):
-    """Тест добавления микса в избранное."""
-    url = reverse("mix-favorite")  # URL без параметров
-    api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {get_token['access']}")
-    payload = {"mix_id": str(create_mix.id)}  # Передаем mix_id через тело запроса
-    response = api_client.post(url, data=payload, format="json")
-    assert response.status_code == 201  # Успешное создание
-    assert MixFavorites.objects.filter(mix=create_mix.id, user=create_user).exists()
-
-
-@pytest.mark.django_db
-def test_remove_mix_from_favorites(api_client, get_token, create_mix, create_user):
-    """Тест удаления микса из избранного."""
-    MixFavorites.objects.create(mix=create_mix, user=create_user)
-    url = reverse("mix-favorite")  # URL без параметров
-    api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {get_token['access']}")
-    payload = {"mix_id": str(create_mix.id)}  # Передаем mix_id через тело запроса
-    response = api_client.post(url, data=payload, format="json")
-    assert response.status_code == 204  # Успешное удаление
-    assert not MixFavorites.objects.filter(mix=create_mix, user=create_user).exists()
+    assert response.status_code == 200
+    json_data = response.json()
+    assert json_data["data"]["action"] == expected_action

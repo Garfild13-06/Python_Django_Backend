@@ -84,16 +84,17 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.mysql'),
-        'NAME': os.getenv('DB_NAME', 'test_inHookah'),
-        'USER': os.getenv('DB_USER', 'test_user'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'test_password'),
+        'NAME': os.getenv('DB_NAME', 'inHookah'),
+        'USER': os.getenv('DB_USER', 'inHookah'),
+        'PASSWORD': os.getenv('DB_PASSWORD', 'inHookah'),
         'HOST': os.getenv('DB_HOST', '127.0.0.1'),
         'PORT': os.getenv('DB_PORT', '3306'),
-        'OPTIONS': {
-            'sql_mode': 'traditional',
-        },
         'TEST': {
-            'NAME': 'test_inHookah',  # База данных для тестирования
+            'NAME': 'inHookah',
+            'USER': 'inHookah',
+            'PASSWORD': 'inHookah',
+            'HOST': '127.0.0.1',
+            'PORT': '3306'
         },
     }
 }

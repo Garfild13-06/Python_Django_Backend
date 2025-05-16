@@ -154,7 +154,7 @@ def create_mixes(users, categories, tobaccos, bowls):
             MixTobacco.objects.create(
                 mix=mix,
                 tobacco=random.choice(tobaccos),
-                weight=random.randint(10, 50),
+                weight=random.choice([5, 10, 15, 20, 25, 30, 35, 40, 45, 50]),  # Веса кратные 5
             )
         mixes.append(mix)
     print(f"Создано {len(mixes)} миксов.")

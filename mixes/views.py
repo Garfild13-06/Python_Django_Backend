@@ -608,7 +608,8 @@ class MixLikeAPIView(APIView):
         operation_description=(
                 "Добавляет или убирает лайк для микса.\n\n"
                 "- Требуется передать `mix_id` в теле запроса.\n"
-                "- Если лайк уже есть, он будет удалён, если нет — добавлен.\n"
+                "- Если лайк уже есть, он будет удалён и вернётся action `unliked`.\n"
+                "- Если лайка нет — будет создан и вернётся action `liked`.\n"
                 "- Требуется аутентификация через JWT."
         ),
         request_body=openapi.Schema(
@@ -620,27 +621,20 @@ class MixLikeAPIView(APIView):
             }
         ),
         responses={
-            201: openapi.Response(
-                description="Лайк успешно добавлен",
+            200: openapi.Response(
+                description="Лайк успешно добавлен/удалён",
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={
                         "status": openapi.Schema(type=openapi.TYPE_STRING, example="ok"),
-                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=201),
-                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Лайк успешно добавлен"),
-                        "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
-                    }
-                )
-            ),
-            204: openapi.Response(
-                description="Лайк успешно удалён",
-                schema=openapi.Schema(
-                    type=openapi.TYPE_OBJECT,
-                    properties={
-                        "status": openapi.Schema(type=openapi.TYPE_STRING, example="ok"),
-                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=204),
-                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Лайк успешно удалён"),
-                        "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
+                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=200),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Лайк успешно добавлен или удалён"),
+                        "data": openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                "action": openapi.Schema(type=openapi.TYPE_STRING, example="liked/unliked"),
+                            }
+                        ),
                     }
                 )
             ),
@@ -674,9 +668,9 @@ class MixLikeAPIView(APIView):
                     type=openapi.TYPE_OBJECT,
                     properties={
                         "status": openapi.Schema(type=openapi.TYPE_STRING, example="bad"),
-                        "code": openapi.Schema(type=openapi.TYPE_INTEGER, example=404),
-                        "message": openapi.Schema(type=openapi.TYPE_STRING, example="Микс с указанным ID не найден"),
-                        "data": openapi.Schema(type=openapi.TYPE_STRING, example="null"),
+                        "code": openapi.TYPE_INTEGER,
+                        "message": openapi.TYPE_STRING,
+                        "data": openapi.TYPE_STRING,
                     }
                 )
             )
@@ -685,16 +679,36 @@ class MixLikeAPIView(APIView):
     def post(self, request, *args, **kwargs):
         mix_id = request.data.get('mix_id')
         if not mix_id:
-            return Response({"status": "bad", "code": 400, "message": "Поле 'mix_id' обязательно", "data": None},
-                            status=400)
+            return Response(
+                {"status": "bad", "code": 400, "message": "Поле 'mix_id' обязательно", "data": None},
+                status=400
+            )
+
         mix = get_object_or_404(Mixes, pk=mix_id)
         like = MixLikes.objects.filter(mix=mix, user=request.user).first()
+
         if like:
             like.delete()
-            return Response({"status": "ok", "code": 204, "message": "Лайк успешно удалён", "data": None}, status=204)
+            return Response(
+                {
+                    "status": "ok",
+                    "code": 200,
+                    "message": "Лайк успешно удалён",
+                    "data": {"action": "unliked"}
+                },
+                status=200
+            )
         else:
             MixLikes.objects.create(mix=mix, user=request.user)
-            return Response({"status": "ok", "code": 201, "message": "Лайк успешно добавлен", "data": None}, status=201)
+            return Response(
+                {
+                    "status": "ok",
+                    "code": 200,
+                    "message": "Лайк успешно добавлен",
+                    "data": {"action": "liked"}
+                },
+                status=200
+            )
 
 
 class MixFavoriteAPIView(APIView):
@@ -783,22 +797,55 @@ class MixFavoriteAPIView(APIView):
             )
         }
     )
+    # def post(self, request, *args, **kwargs):
+    #     mix_id = request.data.get('mix_id')
+    #     if not mix_id:
+    #         return Response({"status": "bad", "code": 400, "message": "Поле 'mix_id' обязательно", "data": None},
+    #                         status=400)
+    #     mix = get_object_or_404(Mixes, pk=mix_id)
+    #     favorite = MixFavorites.objects.filter(mix=mix, user=request.user).first()
+    #     if favorite:
+    #         favorite.delete()
+    #         return Response({"status": "ok", "code": 204, "message": "Микс успешно удалён из избранного", "data": None},
+    #                         status=204)
+    #     else:
+    #         MixFavorites.objects.create(mix=mix, user=request.user)
+    #         return Response({"status": "ok", "code": 201, "message": "Микс успешно добавлен в избранное", "data": None},
+    #                         status=201)
+
     def post(self, request, *args, **kwargs):
         mix_id = request.data.get('mix_id')
         if not mix_id:
-            return Response({"status": "bad", "code": 400, "message": "Поле 'mix_id' обязательно", "data": None},
-                            status=400)
+            return Response(
+                {"status": "bad", "code": 400, "message": "Поле 'mix_id' обязательно", "data": None},
+                status=400
+            )
+
         mix = get_object_or_404(Mixes, pk=mix_id)
         favorite = MixFavorites.objects.filter(mix=mix, user=request.user).first()
+
         if favorite:
             favorite.delete()
-            return Response({"status": "ok", "code": 204, "message": "Микс успешно удалён из избранного", "data": None},
-                            status=204)
+            return Response(
+                {
+                    "status": "ok",
+                    "code": 200,
+                    "message": "Микс успешно удалён из избранного",
+                    "data": {"action": "disfavorited"}
+                },
+                status=200
+            )
         else:
             MixFavorites.objects.create(mix=mix, user=request.user)
-            return Response({"status": "ok", "code": 201, "message": "Микс успешно добавлен в избранное", "data": None},
-                            status=201)
-
+            return Response(
+                {
+                    "status": "ok",
+                    "code": 200,
+                    "message": "Микс успешно добавлен в избранное",
+                    "data": {"action": "favorited"}
+                },
+                status=200
+            )
 
 class UserLikedMixesView(APIView):
     permission_classes = [IsAuthenticated]

@@ -38,7 +38,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
 
 # Сериализатор для обновления пользователя
 class CustomUserUpdateSerializer(serializers.ModelSerializer):
-    avatar = serializers.SerializerMethodField()  # Используем SerializerMethodField для формирования абсолютного URL
+    avatar = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
         model = CustomUser
@@ -57,6 +57,12 @@ class CustomUserUpdateSerializer(serializers.ModelSerializer):
             if request:
                 return request.build_absolute_uri(obj.avatar.url)  # Формируем полный URL
         return None  # Если изображение отсутствует, возвращаем None
+
+    def validate_avatar(self, value):
+        max_size_mb = 1
+        if value and value.size > max_size_mb * 1024 * 1024:
+            raise serializers.ValidationError(f"Аватар не должен превышать {max_size_mb} МБ.")
+        return value
 
 
 # Сериализатор для изменения пароля

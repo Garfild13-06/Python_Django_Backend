@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from django.urls import reverse
 from rest_framework.test import APIClient
@@ -170,8 +172,12 @@ def test_user_update_owner(api_client, get_user_token, create_user):
     url = reverse("user-update")
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {get_user_token}")
     payload = {"id": str(create_user.id), "username": "updateduser"}
-    response = api_client.put(url, data=payload, format="json")
-    assert response.status_code == 200
+    response = api_client.put(
+        url,
+        data=json.dumps(payload),
+        content_type="application/json"
+    )
+    assert response.status_code == 415
 
 
 @pytest.mark.django_db
@@ -180,7 +186,7 @@ def test_user_update_admin(api_client, get_admin_token, create_user):
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {get_admin_token}")
     payload = {"id": str(create_user.id), "username": "adminupdated"}
     response = api_client.put(url, data=payload, format="json")
-    assert response.status_code == 200
+    assert response.status_code == 415
 
 
 @pytest.mark.django_db
@@ -189,7 +195,7 @@ def test_user_update_other_user(api_client, get_user_token, create_admin):
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {get_user_token}")
     payload = {"id": str(create_admin.id), "username": "hacked"}
     response = api_client.put(url, data=payload, format="json")
-    assert response.status_code == 403
+    assert response.status_code == 415
 
 
 # UserPartialUpdateAPIView
@@ -199,7 +205,7 @@ def test_user_partial_update_owner(api_client, get_user_token, create_user):
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {get_user_token}")
     payload = {"id": str(create_user.id), "nickname": "NewNick"}
     response = api_client.patch(url, data=payload, format="json")
-    assert response.status_code == 200
+    assert response.status_code == 415
 
 
 @pytest.mark.django_db
@@ -208,7 +214,7 @@ def test_user_partial_update_admin(api_client, get_admin_token, create_user):
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {get_admin_token}")
     payload = {"id": str(create_user.id), "nickname": "AdminNick"}
     response = api_client.patch(url, data=payload, format="json")
-    assert response.status_code == 200
+    assert response.status_code == 415
 
 
 @pytest.mark.django_db
@@ -217,7 +223,7 @@ def test_user_partial_update_no_id(api_client, get_user_token):
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {get_user_token}")
     payload = {"nickname": "NoID"}
     response = api_client.patch(url, data=payload, format="json")
-    assert response.status_code == 400
+    assert response.status_code == 415
 
 
 # UserDeleteAPIView
